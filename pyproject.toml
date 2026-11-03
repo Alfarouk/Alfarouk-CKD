@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ckd-research-workbench"
+version = "1.0.0"
+description = "Reproducible kidney ultrasound segmentation experiments and mask analysis"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["numpy==2.5.4", "Pillow==13.0.0", "opencv-python-headless==5.0.0.93"]
+
+[project.optional-dependencies]
+ml = ["torch==2.15.0", "transformers==5.22.1", "safetensors==0.8.0"]
+test = ["pytest==9.2.0"]
+
+[project.scripts]
+ckd = "ckd_research.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ckd_research = ["static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

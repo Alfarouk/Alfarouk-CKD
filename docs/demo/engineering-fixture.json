@@ -1,0 +1,37 @@
+{
+  "source": "generated_engineering_fixture_not_a_patient_scan_or_model_prediction",
+  "shape": [
+    256,
+    256
+  ],
+  "labels_are_prediction": false,
+  "measurements": {
+    "label_pixels": {
+      "background": 54195,
+      "region_1": 2013,
+      "region_2": 4143,
+      "region_3": 4218,
+      "capsule_only": 967
+    },
+    "foreground_pixels": 11341,
+    "coverage_fraction": 0.1730499267578125,
+    "units": "mm",
+    "calibration": {
+      "row_mm": 0.4,
+      "column_mm": 0.4
+    },
+    "major_axis": 59.20000457763672,
+    "minor_axis": 38.400001525878906,
+    "area": 1814.5600000000004,
+    "volume_mm3": null,
+    "diagnosis": null,
+    "interpretation": "Research geometry only; no disease or severity inference",
+    "status": "measured",
+    "area_units": "mm2",
+    "component_count": 1,
+    "axis_method": "Minimum rotated rectangle of all foreground contour points"
+  },
+  "evaluation": null,
+  "scope": "Research software; no diagnosis, disease staging or clinical validation",
+  "fixture_calibration": "Illustrative 0.4 mm/pixel, generated fixture only"
+}
