@@ -1,34 +1,31 @@
-# Data and label contract
+# Data and label contracts
 
-The recovered project expected images plus separate `capsule` and `regions`
-masks. The capsule array in the saved analysis output covers the whole kidney;
-it is not a thin outer rim. The regions array contains IDs 0, 1, 2 and 3.
+## Five-label training data
 
-The old combination code first wrote region labels, then replaced every pixel
-inside the capsule with class 3. A supplied analysis plot shows the resulting
-combined mask containing only 0 and 3. The current import preserves region IDs
-and fills only the remaining capsule interior with ID 4:
+The importer accepts an image, a binary capsule mask and a region mask for each
+sample. Region masks contain integer IDs 0–3. The capsule is a filled area,
+not a thin outer rim. The importer preserves region IDs and uses ID 4 only for
+capsule pixels with no region label.
 
-| ID | Meaning in this repository |
+| ID | Meaning |
 | --- | --- |
 | 0 | Background |
-| 1 | Original region 1 |
-| 2 | Original region 2 |
-| 3 | Original region 3 |
+| 1 | Region 1 |
+| 2 | Region 2 |
+| 3 | Region 3 |
 | 4 | Capsule interior without a region label |
 
-Names stay neutral until the dataset's actual annotation guide establishes
-them. The two original scripts disagreed about whether a region meant sinus,
-parenchyma or cortex. An attractive legend is not evidence that a label is right.
+Anatomical names require the dataset’s matching annotation guide. Region IDs
+remain neutral until that contract is established.
 
 ```bash
 ckd import-triplets --images source/images --capsules source/masks/capsule \
   --regions source/masks/regions --output data/imported
 ```
 
-This copies images to PNG and writes combined masks without resizing or
-overwriting source files. Region IDs outside the capsule, missing masks and
-mismatched shapes fail. Make a manifest beside the imported folders:
+The importer copies images to PNG without resizing or overwriting input files.
+It rejects region pixels outside the capsule, missing masks and shape mismatches.
+Create a manifest beside the imported folders:
 
 ```csv
 split,patient_id,image,mask
@@ -37,45 +34,33 @@ val,patient-002,images/sample-002.png,masks/sample-002.png
 test,patient-003,images/sample-003.png,masks/sample-003.png
 ```
 
-Paths must remain inside the manifest directory. Choose splits at patient or
-source-group level before experiments; do not put related frames on both sides.
-Duplicate image content across splits is also rejected. Training uses only the
-listed train/val rows; test rows are held out. Keep patient IDs de-identified.
-PNG masks must hold integer IDs, not a rendered RGB heatmap. Normalize any
-EXIF orientation for the image and mask together first; the workbench rejects
-implicit image-only rotations that could misalign a pair.
+Paths must stay inside the manifest directory. Split at patient or source-group
+level so related frames cannot cross splits. Duplicate image content across
+splits is rejected. Training uses train/val rows; test rows remain held out.
+Use de-identified patient IDs and integer PNG masks, not RGB heatmaps. Apply any
+EXIF rotation to image and mask together before import.
 
-## Original data recovery
+## Four-class inference
 
-No original image dataset or source annotation CSV was included. The trained
-four-class checkpoint was supplied separately on 3 November 2026. The Windows config refers to a local `Normal` folder and the
-training script to a generic Kaggle `US_Dataset_prepared` path. Those paths do
-not identify a verified dataset release.
+The registered Swin checkpoint has four output channels and uses `source-four`.
+It cannot use the five-label training manifest or inherit those anatomical meanings.
+The stored training configuration names `usdata/US_Dataset_80_20`, but it does
+not identify a verified dataset release or split membership.
 
-The structure resembles the authors' [Open Kidney Ultrasound Data Set](https://github.com/rsingla92/kidneyUS).
-That is a possible lead, **not a confirmed attribution**. Its official page
-requires registration and manual review before image access and restricts use
-to non-commercial purposes. No gated images or mirror downloads are bundled
-here. Its published benchmark weights are not the separately supplied custom Swin model.
-Use the authors' annotation guide and permissions if that source is confirmed.
+A capsule/region import must preserve region IDs before filling unlabelled
+capsule pixels. Assigning a capsule class across the whole capsule afterward
+would erase the internal labels. This overwrite was demonstrated on public
+masks in the related [kidneyUS annotation format](https://github.com/rsingla92/kidneyUS).
+That comparison does not establish checkpoint-dataset identity.
 
-The generated sample has no patients and no scientific validation value. It
-exists to exercise the import, geometry, export, UI and test flows offline.
+No training dataset is bundled. kidneyUS requires registration and review for
+image access and has non-commercial use terms. Use the dataset’s own annotation
+guide and permissions if you work with it. Do not transfer its anatomical names
+to an unrelated checkpoint based on a similar file structure.
 
+## Classifiers and samples
 
-## Supplied checkpoint versus candidate annotations
-
-The separately supplied Swin file has four outputs and a saved Kaggle path
-`usdata/US_Dataset_80_20`. This is a stronger source-code link; it still does not
-identify the creator, exact images or split membership.
-
-The candidate kidneyUS source fills the capsule as a binary mask and encodes
-regions as CEC 1, medulla 2 and cortex 3. The recovered combination logic overwrites
-almost all those internal pixels when run on public mask pairs from that
-format. This confirms a defect on that matching format; it does not prove the
-checkpoint used those particular masks. The supplied model’s four IDs remain
-neutral rather than borrowing the candidate’s anatomical names.
-
-Classifier weights contain no dataset or class-name metadata. No gated image
-source is bypassed or redistributed. Generated profile probes remain software
-experiments; an unlabelled input cannot establish class order or accuracy.
+Classifier checkpoints do not record dataset identity, class names, output order
+or training input settings. Their outputs remain neutral indices. Generated
+images exercise import, geometry, inference and exports offline; they cannot
+establish accuracy or label meaning.

@@ -16,13 +16,13 @@ function show(result) {
   current = result;
   const r = result.report, classification = r.task === "classification";
   const generated = r.source.startsWith("generated"), model = r.actual_checkpoint_executed === true;
-  el("result-title").textContent = model ? "Current result · " + r.model_name : generated ? "Current result · generated engineering fixture" : "Current result · supplied image and labels";
-  el("result-profile").textContent = model ? "Input used: " + r.input_profile.title : generated ? "Generated labels only. No checkpoint ran." : "Label schema: " + (r.label_schema_id === "source-four" ? "four neutral source IDs" : "corrected five labels") + ". No checkpoint ran.";
+  el("result-title").textContent = model ? "Current result · " + r.model_name : generated ? "Current result · generated engineering fixture" : "Current result · uploaded image and labels";
+  el("result-profile").textContent = model ? "Input used: " + r.input_profile.title : generated ? "Generated labels only. No checkpoint ran." : "Label schema: " + (r.label_schema_id === "source-four" ? "four-class model labels" : "five labels") + ". No checkpoint ran.";
   el("geometry-panel").classList.toggle("hidden", classification);
   el("classification-panel").classList.toggle("hidden", !classification);
-  el("image-heading").textContent = classification ? "Supplied image" : "Image & labels";
-  el("source-badge").textContent = model ? "SUPPLIED CHECKPOINT · LOCAL MODEL RUN" : generated ? "GENERATED FIXTURE · NO MODEL RUN" : "SUPPLIED LABELS · NO MODEL RUN";
-  el("frame-caption").textContent = generated ? "Synthetic engineering fixture — not a patient scan" : model ? "Your image · actual supplied-model output · research only" : "Your image and labels · processed locally";
+  el("image-heading").textContent = classification ? "Input image" : "Image & labels";
+  el("source-badge").textContent = model ? "MODEL INFERENCE · LOCAL" : generated ? "GENERATED FIXTURE · NO MODEL RUN" : "UPLOADED LABELS · NO MODEL RUN";
+  el("frame-caption").textContent = generated ? "Synthetic engineering fixture — not a patient scan" : model ? "Your image · model output · research only" : "Your image and labels · processed locally";
   el("legend").replaceChildren();
   if (classification) {
     el("index-scores").replaceChildren();
@@ -32,7 +32,7 @@ function show(result) {
       score.textContent=r.softmax_index_scores[i].toFixed(4); raw.textContent=`Raw logit ${logit.toFixed(5)}`;
       card.append(label,score,raw); el("index-scores").append(card);
     });
-    el("image-note").textContent="Original classifier labels and image preparation are not supplied. The downloaded JSON records the chosen research profile and both raw logits.";
+    el("image-note").textContent="Classifier class meanings and training input settings are undocumented. The downloaded JSON records the chosen research profile and both raw logits.";
     view="image";
   } else {
     const m = r.measurements, physical = m.units === "mm";
@@ -46,14 +46,14 @@ function show(result) {
     el("calibration-note").replaceChildren();
     const icon=document.createElement("span"), p=document.createElement("p"), strong=document.createElement("strong");
     icon.textContent=physical?"✓":"○";
-    strong.textContent=physical?(r.fixture_calibration?"Illustrative sample scale.":"Supplied pixel scale."):"No physical scale supplied.";
+    strong.textContent=physical?(r.fixture_calibration?"Illustrative sample scale.":"Entered pixel scale."):"No physical scale supplied.";
     p.append(strong,document.createElement("br"),physical?`${m.calibration.row_mm} × ${m.calibration.column_mm} mm / pixel. No disease classification is inferred.`:"These are pixel measurements. No centimetres or estimated volume are invented.");
     el("calibration-note").append(icon,p);
     Object.entries(r.labels).filter(([id])=>id!=="0").forEach(([id,name])=>{
       const item=document.createElement("span"), swatch=document.createElement("i");
       swatch.className="c"+id; item.append(swatch,name.replaceAll("_"," ")); el("legend").append(item);
     });
-    el("image-note").textContent=r.label_schema_id==="source-four" ? "Four neutral source IDs. The original mask-combination code can overwrite internal regions; anatomy names are not inferred." : "Region IDs stay neutral. Confirm the annotation schema before assigning anatomy names.";
+    el("image-note").textContent=r.label_schema_id==="source-four" ? "Four output IDs. Anatomical meanings are unverified; use the matching label schema." : "Region IDs stay neutral. Confirm the annotation schema before assigning anatomy names.";
   }
   el("overlay-view").disabled=!result.overlay;
   renderView();
@@ -89,7 +89,7 @@ function modelChoice(){
   select.replaceChildren(new Option("Choose an explicit input profile",""));select.disabled=!spec;
   if(spec)for(const p of spec.profiles)select.add(new Option(p.title,p.id));
   el("run-model").disabled=!spec?.installed;
-  el("model-note").textContent=!spec?"Choose a model to see its input choices and known limits.":!spec.installed?"These model files are not installed here. Follow the README setup steps first.":spec.task==="segmentation"?"Four source classes, separate from the five-label experiment. The two source image recipes may produce different outputs.":"Two raw indices. Their class meanings and original image recipe are unknown; the available input profile is an explicit research choice.";
+  el("model-note").textContent=!spec?"Choose a model to see its input choices and known limits.":!spec.installed?"These model files are not installed here. Follow the README setup steps first.":spec.task==="segmentation"?"Four classes, separate from five-label training. The two grayscale profiles may produce different outputs.":"Two output indices with undocumented class meanings. Input profiles are explicit research settings.";
 }
 el("model-select").onchange=modelChoice;
 function modelBusy(busy) {
@@ -113,5 +113,5 @@ el("model-controls").onsubmit=async event=>{
   finally{button.textContent="Run on this image ↗";modelBusy(false);}
 };
 el("download").onclick=()=>{if(!current)return;const url=URL.createObjectURL(new Blob([JSON.stringify(current.report,null,2)+"\n"],{type:"application/json"}));const a=document.createElement("a");a.href=url;a.download="CKD-Analysis.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
-async function loadModels(){try{const response=await fetch("/api/models");if(!response.ok)throw new Error("Unable to read local model inventory");models=(await response.json()).models;for(const spec of models)el("model-select").add(new Option(spec.title+(spec.installed?"":" · not installed"),spec.id));el("checkpoint-status").textContent=`${models.filter(x=>x.installed).length} of 3 supplied checkpoints available locally. Generated samples remain software checks; they do not show model accuracy.`;}catch(e){error(e.message);}}
+async function loadModels(){try{const response=await fetch("/api/models");if(!response.ok)throw new Error("Unable to read local model inventory");models=(await response.json()).models;for(const spec of models)el("model-select").add(new Option(spec.title+(spec.installed?"":" · not installed"),spec.id));el("checkpoint-status").textContent=`${models.filter(x=>x.installed).length} of 3 model checkpoints available locally. Generated samples remain software checks; they do not show model accuracy.`;}catch(e){error(e.message);}}
 sample();loadModels();

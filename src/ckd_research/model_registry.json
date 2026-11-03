@@ -6,9 +6,9 @@
   "models": [
     {
       "id": "source-swin-four",
-      "title": "Supplied Swin V2 \u00b7 four source classes",
+      "title": "Swin V2 \u00b7 four classes",
       "task": "segmentation",
-      "architecture": "Source-compatible Swin V2 tiny + five upsampling blocks",
+      "architecture": "Swin V2 tiny + five upsampling blocks",
       "class_count": 4,
       "input_profiles": [
         "source-clahe-256",
@@ -48,19 +48,19 @@
         ],
         "layer_norm_eps": 1e-05,
         "output_count": 4,
-        "origin": "Recovered source architecture and strict tensor compatibility; library runtime configuration is explicit."
+        "origin": "Explicit Swin V2 architecture; checkpoint tensor names and shapes match strictly."
       },
-      "semantic_limits": "Four source IDs remain separate from the corrected five-label experiment. Source anatomy interpretations conflict; no disease or calibrated anatomy inference.",
+      "semantic_limits": "Four output IDs remain separate from five-label training. Anatomical meanings are unverified; no disease classification is inferred.",
       "saved_training_metadata": {
         "epoch_zero_based": 40,
         "val_dice": 0.8047522725330458,
-        "scope": "Value recorded inside the supplied checkpoint; not independently validated performance."
+        "scope": "Value stored in the checkpoint; not independently validated performance."
       },
       "strict_tensor_compatibility_verified": true
     },
     {
       "id": "biopsy-efficientnet",
-      "title": "Supplied biopsy file \u00b7 two raw indices",
+      "title": "EfficientNet-B4 \u00b7 two output indices",
       "task": "classification",
       "architecture": "TorchVision EfficientNet-B4 with nested two-output linear head",
       "class_count": 2,
@@ -92,7 +92,7 @@
     },
     {
       "id": "sclerosis-convnext",
-      "title": "Supplied sclerosis file \u00b7 two raw indices",
+      "title": "ConvNeXt tiny \u00b7 two output indices",
       "task": "classification",
       "architecture": "Transformers ConvNeXt tiny with two-output classifier",
       "class_count": 2,
@@ -129,7 +129,7 @@
         "layer_scale_init_value": 1e-06,
         "num_labels": 2,
         "mode": "eval",
-        "origin": "Tensor-inferred architecture; parameterless configuration is an explicit research runtime, not recovered training metadata."
+        "origin": "Tensor-compatible architecture with explicit inference configuration; training configuration is undocumented."
       },
       "semantic_limits": "Class meanings/order, original input recipe and training configuration are absent. Filename is not a clinical label contract.",
       "strict_tensor_compatibility_verified": true

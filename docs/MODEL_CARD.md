@@ -1,87 +1,70 @@
-# Supplied model card
+# Model card
 
-These models support local engineering and research inspection. There is no
-diagnostic indication, disease staging or clinical deployment claim.
+The workbench supports local image analysis and research inference. Model outputs
+are numerical observations, not a diagnosis or disease stage.
 
-| Artifact | Verified tensor-compatible runtime | Outputs | Input knowledge |
+| Model asset | Runtime | Output | Input contract |
 | --- | --- | --- | --- |
-| best_swinv2_kidney.pth | Swin V2 tiny + five decoder blocks | Four pixel indices | Two differing recipes recovered from source code |
-| biopsy_pathologist.pth | TorchVision EfficientNet-B4 + nested linear head | Two raw indices | Original resize/crop/channels/normalization unknown |
-| kidney_sclerosis_convnext.pth | Transformers ConvNeXt tiny | Two raw indices | Original image recipe and class order unknown |
+| best_swinv2_kidney.pth | Swin V2 tiny with five decoder blocks | Four pixel-label IDs | Grayscale 256 and grayscale 256/CLAHE profiles |
+| biopsy_pathologist.pth | TorchVision EfficientNet-B4 with nested linear head | Two indices | Three explicit RGB research profiles |
+| kidney_sclerosis_convnext.pth | Transformers ConvNeXt tiny | Two indices | Three explicit RGB research profiles |
 
-The registry pins original and converted hashes. Operational files are
-safetensors in a private release, outside Git. Strict tensor loading and finite
-checks passed for all three. This establishes compatible names/shapes, not the
-original parameterless operations, complete training graph or clinical value.
+The registry pins checkpoint and safetensors hashes. Inference uses the
+safetensors assets in the private model release. Loading checks every tensor
+name, shape and finite value. Matching tensors establish runtime compatibility;
+they do not establish undocumented operations, class meanings or clinical performance.
 
-## Four-class source Swin
+## Swin V2
 
-The supplied checkpoint matches the recovered source model tensors. It records
-`epoch=40`, four classes, a 256 × 256 target, batch size 8, learning rate 0.0002 and 50
-planned epochs. The source saves its loop index, so 40 is reported as stored,
-not rewritten as 40 completed epochs.
+The four-class configuration uses a 256 × 256 input, batch size 8 and learning
+rate 0.0002. Its checkpoint records zero-based `epoch=40` and a plan of 50 epochs.
+The stored `val_dice=0.8047522725330458` is historical metadata, not independently
+reproduced accuracy. That metric includes background and scores a class absent
+from both masks as 1. It cannot be directly compared with foreground macro Dice.
 
-Its stored validation Dice is 0.8047522725330458. The original metric averages
-all four classes including background and assigns 1 when a class is absent from
-both prediction and target. This value has not been independently reproduced
-and must not be compared directly with the corrected foreground-macro metric.
+Two input profiles are available:
 
-The source training recipe is Pillow grayscale, bicubic 256 resize and /255.
-The source inference recipe is OpenCV grayscale, CLAHE (2.0, 8 × 8), linear 256
-resize and /255. Both are explicit choices in the workbench; neither is called
-a proven original training match for every use of these supplied weights.
+- `source-training-256`: Pillow grayscale, bicubic resize to 256 × 256 and /255.
+- `source-clahe-256`: OpenCV grayscale, CLAHE (2.0, 8 × 8), linear resize to 256 × 256 and /255.
 
-Four neutral source IDs remain separate from the five corrected labels. The
-original scripts disagree about anatomy. Their combination step can replace
-internal region labels with capsule class 3. This was reproduced on the public
-masks in a closely matching candidate dataset, whose original images require
-access approval. Exact checkpoint-dataset identity remains unverified.
-
-Six synthetic-input runs across both recipes show that the input choice changes
-outputs. Class 2 never won a pixel in those probes, while class 1 did. This is not
-a clinical experiment and does not prove a particular training collapse.
+Input choice can change a prediction. Neither profile establishes the original
+dataset or annotation contract. The four output IDs remain neutral. Their
+anatomical meanings are unverified. Keep them separate from the five-label
+training pipeline.
 
 ## Classifiers
 
-Each supplied classifier stores only tensors. Neither file records class
-names/order, input recipe, dataset, split, training history or accuracy.
-Reassigning the two output labels leaves the same weight tensors intact, so
-weights alone cannot determine which semantic label belongs to an index.
+The classifier checkpoints contain tensors without class names, output order,
+input recipe, dataset, split, training history or accuracy. Swapping label names
+would leave the same weights intact, so tensor values alone cannot identify a class.
 
-The selected runtime is explicit. EfficientNet uses the library B4 backbone
-and a nested Identity→Linear head. The Identity operation is an assumption:
-parameterless head operations are not recoverable from state-dictionary keys.
-ConvNeXt uses the recorded tiny widths/depths with GELU and layer-normalization
-epsilon 1e-12. These choices are documented research settings, not hidden claims
-about the original training code.
+EfficientNet uses the B4 backbone and a nested Identity→Linear head. ConvNeXt
+uses tiny widths/depths, GELU and layer-normalization epsilon 1e-12. These are
+explicit inference configurations. The checkpoint tensors do not identify
+parameterless operations uniquely: Identity and ReLU head variants accept the
+same biopsy weights but give different outputs on generated inputs.
 
-A controlled recovery check loaded the same biopsy tensors into Identity and
-ReLU head variants. Both matched every tensor strictly, yet produced different
-outputs on generated inputs. This shows why those stored tensors cannot uniquely
-identify the missing parameterless operation; it does not select an original variant.
+The profiles are RGB 224/ImageNet normalization, RGB 380/ImageNet normalization
+and RGB 224/unit range. Each report records the selected profile, raw logits and
+softmax index scores. The training recipe is undocumented. Scores are not
+calibrated clinical probabilities and cannot validate a profile or label meaning.
+The workbench produces no cross-model ensemble or disease verdict.
 
-RGB224/ImageNet normalization, RGB380/ImageNet normalization and RGB224/unit
-range are named experiment profiles. Every result stores the actual settings,
-raw logits and softmax index scores. Those scores are neither calibrated
-clinical probabilities nor proof of the correct original profile. No cross-model
-ensemble or disease verdict is produced.
+## Five-label training
 
-## Corrected five-label training
+The separate training pipeline preserves all region IDs. Use patient-separated
+manifests and a held-out test set. Each run records loss and foreground macro
+Dice. A class absent from both masks is null and excluded from that average.
+Generated samples test software behavior only.
 
-The separate experiment keeps five labels and preserves the input region IDs.
-Use patient-separated manifests and a held-out test set. It writes this run’s
-loss and foreground macro Dice. An absent class in both masks is null and
-excluded from that macro average. Generated samples test software only.
+Physical units require image calibration. Volume also requires a measured third
+dimension. Scientific performance claims require labelled data, its annotation
+and split history, and independent evaluation.
 
-Physical units require actual image calibration. No assumed scan depth,
-centre-to-cortex heuristic or image-dimension disease rules are restored.
-Original labelled data, annotation/split history and independent evaluation are
-still needed for scientific performance claims.
-
-## Primary technical references
+## References
 
 - [PyTorch restricted serialization](https://docs.pytorch.org/docs/2.15/notes/serialization.html)
 - [Transformers Swin V2](https://huggingface.co/docs/transformers/model_doc/swinv2)
 - [TorchVision EfficientNet-B4](https://docs.pytorch.org/vision/main/models/generated/torchvision.models.efficientnet_b4.html)
 - [Transformers ConvNeXt](https://huggingface.co/docs/transformers/model_doc/convnext)
-- [Candidate kidneyUS source and access conditions](https://github.com/rsingla92/kidneyUS)
+- [kidneyUS annotation format and access terms](https://github.com/rsingla92/kidneyUS)

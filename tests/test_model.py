@@ -24,9 +24,9 @@ def test_offline_swin_forward_and_checkpoint_roundtrip(tmp_path, monkeypatch):
         expected = model(x)
     assert expected.shape == (1, 5, 64, 64)
     path = save_checkpoint(model, tmp_path, training_record={"kind": "untrained_engineering_fixture"})
-    recovered, metadata = load_checkpoint(path)
+    loaded, metadata = load_checkpoint(path)
     with torch.inference_mode():
-        assert torch.equal(expected, recovered(x))
+        assert torch.equal(expected, loaded(x))
     assert metadata["clinical_validation"] is False
 
 

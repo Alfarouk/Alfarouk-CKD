@@ -42,7 +42,7 @@ def test_model_inventory_and_invalid_model_request(model_server):
     with pytest.raises(urllib.error.HTTPError) as exc:
         post(model_server + "/api/run-model", {"model_id": "not-a-model", "profile_id": "research-rgb-224", "image": image})
     assert exc.value.code == 400
-    assert "Unknown supplied model" in exc.value.read().decode()
+    assert "Unknown model" in exc.value.read().decode()
 
 
 def test_manual_source_four_schema_survives_HTTP(model_server):

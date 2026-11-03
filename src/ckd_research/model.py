@@ -91,7 +91,7 @@ class SwinV2Segmentation(_SwinV2Architecture):
 
 
 class SourceSwinV2Segmentation(_SwinV2Architecture):
-    """Separate source-compatible four-output model, never a five-label alias."""
+    """Four-output checkpoint contract, separate from five-label training."""
     def __init__(self):
         super().__init__({**default_architecture(), "num_classes": 4}, num_classes=4)
 
@@ -113,7 +113,7 @@ def save_checkpoint(model, directory, *, training_record):
 def load_checkpoint(manifest_path):
     manifest_path = Path(manifest_path).resolve()
     if not manifest_path.is_file():
-        raise FileNotFoundError("Five-label experiment manifest is missing. Use run-model for the separately supplied checkpoints.")
+        raise FileNotFoundError("Five-label experiment manifest is missing. Use run-model for registered checkpoints.")
     manifest = json.loads(manifest_path.read_text())
     if (not isinstance(manifest, dict) or manifest.get("format_version") != 1
             or manifest.get("preprocessing") != "grayscale_bilinear_resize_divide255"):
@@ -144,7 +144,7 @@ def load_checkpoint(manifest_path):
 def import_legacy_checkpoint(path, destination, *, expected_sha256, architecture, training_record):
     """Explicit opt-in conversion of a trusted state dictionary, without pickle code.
 
-    A source-era four-class checkpoint cannot be silently converted into the
+    A four-class checkpoint cannot be silently converted into the
     corrected five-class task. It must be retained separately and retrained.
     """
     path = Path(path)

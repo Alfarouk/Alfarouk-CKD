@@ -1,58 +1,36 @@
-# Project provenance
+# Attribution and use
 
-The source was supplied in `CKD.zip`. The useful custom files were inside
-`.venv/Scripts`, beside installed Windows programs:
+The workbench uses the following third-party architectures and libraries:
 
-- `kidney_swin_model.py`: Swin V2 model, three-file dataset, training, metrics,
-  measurements and inference.
-- `examples.py`: a second model/inference/report path with a different anatomy
-  interpretation and preprocessing.
-- `utils.py`: image loading, mask quality checks, overlap and overlays.
-- `config.yaml`: local segmentation settings and paths.
+- [Swin V2](https://huggingface.co/docs/transformers/model_doc/swinv2), through
+  Hugging Face Transformers.
+- [EfficientNet-B4](https://docs.pytorch.org/vision/main/models/generated/torchvision.models.efficientnet_b4.html),
+  through TorchVision.
+- [ConvNeXt](https://huggingface.co/docs/transformers/model_doc/convnext), through
+  Hugging Face Transformers.
+- PyTorch, safetensors, NumPy, Pillow and OpenCV for tensors, storage and images.
 
-The location did not make these files third-party dependencies. They were
-identified separately from installed-package RECORD manifests before recovery.
+These projects retain their authorship and respective licenses. Installing the
+workbench does not change the terms of its dependencies.
 
-The archive also contained Ultralytics YOLOv5 at upstream commit
-`2540fd4c1c2d9186126a71b3eb681d3a0a11861e`. All 146 non-environment files were
-compared with its Git object database. Code matches after line-ending
-normalization; only a training-command argument in two README files differs.
-This does not establish an original YOLO implementation by Alfarouk. YOLOv5 is
-not copied into the clean kidney workbench.
+## Model assets
 
-## Source-era work and this recovery
+`model_registry.json` identifies each checkpoint and operational safetensors
+file by its exact SHA256. Assets are stored in this private repository’s model
+release. Runtime compatibility does not establish training-data rights,
+clinical validity or permission to redistribute a model.
 
-The archive is associated with Alfarouk's academic work. His family believes
-he implemented the custom CKD project; that is not a verified sole-authorship
-history. The upstream models and libraries remain credited to their authors.
-The November 2026 restoration adds portable packaging, explicit contracts,
-tests, data validation, safe checkpoint manifests, a local UI and documentation
-with AI assistance. These new additions must not be backdated as original work.
+The classifier files contain tensors without class names or training input
+settings. Their runtime assumptions are documented in the [model card](MODEL_CARD.md).
+The four-output Swin checkpoint is distinct from the five-label training pipeline.
 
-The source had no stated license for the custom files. No blanket license or
-copyright ownership over collaborators' code is invented. Original contributors
-and release rights should be established before publishing the source openly.
+## Data and distribution
 
-The clean repo excludes bundled environments, bytecode, IDE paths, unrelated
-images, a private webcam photo, patient-derived analysis plots and model blobs.
-Original archive hashes and the detailed recovery evidence are retained in the
-private LifeFlow profile rather than exposed in this public-facing workbench.
+No patient dataset or private camera image is bundled. The generated sample is
+synthetic test material. The [kidneyUS project](https://github.com/rsingla92/kidneyUS)
+is a reference for a related capsule/region annotation format, not a confirmed
+training-data source for these checkpoints. Its images have their own access
+conditions and non-commercial terms; none are redistributed here.
 
-
-## Separately supplied model files
-
-On 3 November 2026 three model files were supplied separately from the archive:
-`best_swinv2_kidney.pth`, `biopsy_pathologist.pth` and
-`kidney_sclerosis_convnext.pth`. The first has the source Swin tensor layout
-and saved training configuration. The other two strictly fit the documented
-research runtimes but contain only tensors, with no labels or input recipe.
-
-These files establish supplied artifacts, not who independently trained each
-model or its clinical accuracy. Exact originals and converted safetensors are
-kept in the private repository’s release assets. Source licensing and dataset
-rights remain separate from the ability to execute a tensor-compatible model.
-
-A controlled test also found that different parameterless classifier-head
-operations can accept exactly the same tensors while giving different outputs.
-The documented runtime assumption is therefore kept separate from original
-training provenance.
+This repository has no open-source license grant. Keep code, model and dataset
+permissions separate when planning public or commercial distribution.

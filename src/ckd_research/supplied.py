@@ -1,6 +1,6 @@
-"""Hash-bound supplied checkpoints and explicit research-only inference.
+"""Hash-bound checkpoints and explicit research inference.
 
-Model architecture is checked strictly. A tensor match does not recover class
+Model architecture is checked strictly. A tensor match does not establish class
 meanings, preprocessing, parameterless operations or clinical performance.
 """
 from contextlib import contextmanager
@@ -27,18 +27,18 @@ MODEL_IDS = {"source-swin-four", "biopsy-efficientnet", "sclerosis-convnext"}
 _LOCK = threading.Lock()
 PROFILES = {
     "source-clahe-256": {
-        "title": "Source inference: grayscale + CLAHE, 256 × 256",
+        "title": "Grayscale + CLAHE · 256 × 256",
         "size": 256, "channels": 1, "decoder": "OpenCV grayscale",
         "resize": "stretch, OpenCV linear", "clahe": {"clip_limit": 2.0, "tile_grid": [8, 8]},
         "mean": [0.0], "std": [1.0],
-        "provenance": "Recovered examples.py inference settings; differs from the source training path.",
+        "provenance": "Grayscale and CLAHE inference profile; differs from the grayscale training profile.",
     },
     "source-training-256": {
-        "title": "Source training: grayscale, 256 × 256, no CLAHE",
+        "title": "Grayscale · 256 × 256",
         "size": 256, "channels": 1, "decoder": "Pillow grayscale",
         "resize": "stretch, Pillow bicubic", "clahe": None,
         "mean": [0.0], "std": [1.0],
-        "provenance": "Recovered dataset-code settings; exact checkpoint data and annotation provenance remain unverified.",
+        "provenance": "Grayscale training profile; checkpoint data identity and annotation provenance remain unverified.",
     },
     "research-rgb-224": {
         "title": "Research choice: RGB, 224 × 224, ImageNet normalization",
@@ -81,7 +81,7 @@ def registry():
     if (not isinstance(value, dict) or value.get("schema_version") != 1
             or not isinstance(value.get("models"), list) or len(value["models"]) != 3
             or {s.get("id") for s in value["models"] if isinstance(s, dict)} != MODEL_IDS):
-        raise ValueError("Unsupported supplied-model registry")
+        raise ValueError("Unsupported model registry")
     for spec in value["models"]:
         for key, extension in [("original", ".pth"), ("weights", ".safetensors")]:
             asset = spec.get(key)
@@ -102,7 +102,7 @@ def spec_for(model_id):
     try:
         return next(s for s in registry()["models"] if s["id"] == model_id)
     except StopIteration as exc:
-        raise ValueError("Unknown supplied model") from exc
+        raise ValueError("Unknown model") from exc
 
 
 def model_status(directory):
@@ -130,7 +130,7 @@ def build_model(model_id):
             num_labels=2, depths=[3, 3, 9, 3], hidden_sizes=[96, 192, 384, 768],
             hidden_act="gelu", layer_norm_eps=1e-12, layer_scale_init_value=1e-6))
     else:
-        raise ValueError("Unknown supplied model")
+        raise ValueError("Unknown model")
     return model.cpu().eval()
 
 
@@ -150,7 +150,7 @@ def one_model():
 def _restricted_original(path, spec):
     import torch
     if file_hash(path) != spec["original"]["sha256"]:
-        raise ValueError("Original checkpoint hash differs from the supplied artifact")
+        raise ValueError("Checkpoint hash differs from the registered asset")
     unsafe = set(torch.serialization.get_unsafe_globals_in_checkpoint(path))
     if spec["id"] == "source-swin-four":
         if unsafe != {"numpy.core.multiarray.scalar", "numpy.dtype"}:
@@ -163,7 +163,7 @@ def _restricted_original(path, spec):
             checkpoint = torch.load(path, weights_only=True, map_location="cpu", mmap=True)
         return checkpoint["model_state_dict"]
     if unsafe:
-        raise ValueError("Unexpected globals in supplied tensor-only checkpoint")
+        raise ValueError("Unexpected globals in tensor-only checkpoint")
     return torch.load(path, weights_only=True, map_location="cpu", mmap=True)
 
 

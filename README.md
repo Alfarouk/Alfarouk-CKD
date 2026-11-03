@@ -1,25 +1,14 @@
 # Kidney Segmentation Lab
 
-A local research workbench for inspecting model outputs and labelled masks.
-It now runs three supplied checkpoints: a four-class Swin V2 segmenter and two
-classifiers. It also keeps the corrected five-label training experiment,
-calibrated geometry, data checks, batch exports and generated sample.
+A local workbench for model inference, labelled-image analysis and segmentation
+experiments. Run Swin V2, EfficientNet-B4 and ConvNeXt models, inspect their
+outputs, measure labelled regions and export results from the browser or CLI.
 
-**Research software; no diagnosis or disease staging.** Running the weights
-proves a software path. It does not recover missing class meanings or establish
-accuracy on a patient image. The classifiers return two neutral indices. Their
-original image recipes and class order have not been recovered.
+![Local model inference on a generated test image](docs/images/workbench.jpg)
 
-The original custom code was found inside a bundled Windows environment. This
-repository separates it from installed packages and makes it portable. The
-November 2026 recovery, UI, tests and documentation were developed with AI
-assistance. Those additions are distinct from the original academic work.
+## Quick start
 
-![Local research workbench with a generated labelled sample](docs/images/workbench.jpg)
-
-## Start locally
-
-Use Python 3.12 or newer. Python 3.12 on macOS is the verified local environment.
+Use Python 3.12 or newer. Python 3.12 on macOS is the tested local environment.
 
 ```bash
 python3 -m venv .venv
@@ -29,82 +18,80 @@ ckd fetch-models --models-dir models
 ckd serve --models-dir models
 ```
 
-Open **http://127.0.0.1:8782**. On Windows, activate with
-`.venv\Scripts\activate`. Stop the server with Ctrl+C.
+Open **http://127.0.0.1:8782**. In Windows PowerShell, activate the environment
+with `.\.venv\Scripts\Activate.ps1`. Stop the server with Ctrl+C.
 
-`fetch-models` uses your existing GitHub CLI sign-in and access to this private
-repository. It downloads the three safetensors assets from release `v1.1.0`,
-checks every SHA256 and refuses to overwrite different existing files. No
-credentials are stored in the repository. Original `.pth` files are also kept
-in the private release; add `--include-originals` to retrieve them.
+Model downloads require the [GitHub CLI](https://cli.github.com/) and access to
+this private repository. The downloader uses your existing sign-in and checks
+every file’s SHA256. It preserves existing files. The model registry pins the
+assets in release `v1.1.0`; the application version is independent of that asset
+version. No credentials or model binaries are stored in Git.
 
-For the generated sample and manual mask analysis alone, `pip install -e .`
-remains enough. They work without PyTorch or downloaded model files. The server
-stays on localhost and sends no images to an external service.
+For the generated sample and manual mask analysis, install with
+`python -m pip install -e .`. Those features work without model downloads or
+PyTorch. Images are processed locally; the server binds to localhost.
 
-## Run a supplied model
+## Run inference
 
-Choose **Run a model**, select a model, explicitly choose an input profile and
-provide an image. The JSON export records the actual weight hash, input choice,
-runtime configuration and outputs. Only one model is loaded at a time.
+In **Run a model**, choose a model, input profile and image. The result keeps its
+model name and input settings when you prepare the next run. Downloads contain
+the weight hash, runtime configuration, input settings and numerical output.
+Only one model is loaded at a time.
+
+| Model | Output | Input profiles |
+| --- | --- | --- |
+| Swin V2 tiny | Four pixel-label IDs | Grayscale 256; grayscale 256 with CLAHE |
+| EfficientNet-B4 | Two output indices | RGB 224 or RGB 380 with ImageNet normalization; RGB 224 unit range |
+| ConvNeXt tiny | Two output indices | RGB 224 or RGB 380 with ImageNet normalization; RGB 224 unit range |
 
 ```bash
 ckd models --models-dir models
 ckd run-model --id source-swin-four --profile source-training-256 \
-  --image image.png --models-dir models --output results/source-swin
+  --image image.png --models-dir models --output results/swin
 ckd run-model --id source-swin-four --profile source-clahe-256 \
-  --image image.png --models-dir models --output results/source-swin-clahe
+  --image image.png --models-dir models --output results/swin-clahe
 ckd run-model --id biopsy-efficientnet --profile research-rgb-224 \
-  --image image.png --models-dir models --output results/biopsy
+  --image image.png --models-dir models --output results/efficientnet
 ckd run-model --id sclerosis-convnext --profile research-rgb-224 \
   --image image.png --models-dir models --output results/convnext
 ```
 
-The two recovered Swin recipes differ: the training code uses grayscale,
-Pillow bicubic resize and division by 255; the inference script adds CLAHE and
-uses OpenCV linear resize. Both are available by name. Neither is silently
-substituted for the other.
+The two Swin profiles use different grayscale decoding and resize methods.
+The CLAHE profile also changes local contrast. Classifier profiles are explicit
+research settings; their training input recipe and output class order are not
+documented. See the [model card](docs/MODEL_CARD.md) before interpreting results.
 
-Classifier options are **research input choices**, not recovered training
-settings. RGB224 with ImageNet normalization, RGB380 with that normalization,
-and RGB224 divided by 255 without normalization can be compared. Their results
-may differ. A larger index score is not proof of the right recipe or a disease.
-See the [model card](docs/MODEL_CARD.md).
-
-If you already have the exact supplied originals, convert them locally:
+If you have the checkpoint files listed in the registry, convert them locally:
 
 ```bash
-ckd import-models --source-dir /path/to/originals --models-dir models
+ckd import-models --source-dir /path/to/checkpoints --models-dir models
 ```
 
-Conversion accepts only the recorded source hashes. It uses restricted
-`weights_only=True` loading, checks all tensor names/shapes and finite values,
-and writes safetensors. The Swin file needs a narrowly scoped, reviewed NumPy
-scalar/dtype allowlist for its saved metric. No custom Python class is trusted,
-no unrestricted pickle is used, and the originals are unchanged.
+Import accepts only the registered hashes. Restricted tensor loading checks
+names, shapes and finite values before writing safetensors. Input files stay
+unchanged. The private asset release also contains the `.pth` files; use
+`ckd fetch-models --models-dir models --include-originals` to download them.
 
-## Analyze labels and geometry
+## Analyze masks and geometry
 
 ```bash
 ckd demo --output results/demo
 ckd analyze --image image.png --mask labels.png --output results/analysis
 ckd analyze --image image.png --mask labels.png --spacing 0.25 0.30 --output results/calibrated
-ckd analyze --image image.png --mask source-labels.png --label-schema source-four --output results/source-labels
+ckd analyze --image image.png --mask labels.png --label-schema source-four --output results/four-class
 ckd check-data --manifest data/manifest.csv
 ckd batch --manifest data/manifest.csv --output results/batch
 ```
 
-Exports contain the original image, mask when present, overlay when present and
-JSON. Batch analysis also writes CSV. Spacing means **row mm/pixel, column
-mm/pixel for the original image**. Otherwise geometry stays in pixels. Volume
-requires both real spacing and an independently measured third dimension via
-`--depth-mm`. No anatomy or disease is inferred from a coloured region. Use separate output
-folders for segmentation and classifier results; cross-task reuse is rejected
-before writing, so an old mask cannot accompany a new classifier report.
+Exports contain the image, JSON and, for segmentation, the mask and overlay.
+Batch analysis also writes CSV. Spacing is **row mm/pixel, column mm/pixel**
+for the input image. Without calibration, measurements stay in pixels. Volume
+also requires an independently measured third dimension via `--depth-mm`.
+Separate output folders are required for segmentation and classification.
 
-![Generated engineering fixture; not a patient image or model prediction](docs/demo/engineering-fixture.overlay.png)
+![Generated sample for offline analysis and tests](docs/demo/engineering-fixture.overlay.png)
 
-## Keep the five-label experiment separate
+## Train a five-label segmenter
 
 ```bash
 ckd train --manifest data/manifest.csv --output checkpoints/experiment --epochs 10
@@ -112,43 +99,24 @@ ckd predict --model checkpoints/experiment/model.json --image image.png --output
 python -m pytest
 ```
 
-This experiment preserves the Swin V2 backbone and five-stage decoder while
-correcting the original mask-combination problem. It has **five labels**; the
-supplied checkpoint has **four**. They use separate model classes, manifests,
-result schemas and legends. The supplied weights are never relabelled as a
-five-label trained model.
+The training pipeline preserves region IDs and uses a five-label contract.
+It is separate from the four-output checkpoint: model classes, manifests,
+result schemas and legends remain distinct. Weights are never silently relabelled.
 
-Use the [data guide](docs/DATA.md) first. Patients or identical image content may
-not cross splits. Training defaults to random initialization with no download.
-`--pretrained-backbone microsoft/swinv2-tiny-patch4-window8-256` explicitly opts
-into fetching a published backbone; that backbone alone is not a trained kidney
-segmenter. Focal loss and cross-entropy are supported.
+Use the [data guide](docs/DATA.md) to prepare patient-separated manifests.
+Duplicate image content across splits is rejected. Training starts with random
+weights unless `--pretrained-backbone microsoft/swinv2-tiny-patch4-window8-256`
+is selected. That option downloads a backbone, not a trained kidney segmenter.
+Focal loss and cross-entropy are available.
 
-## Evidence and limits
+## Scope
 
-All three architectures strictly accept their supplied tensors. Real CPU runs
-and input-profile probes are recorded separately from clinical evaluation.
-The Swin file stores `epoch=40` and `val_dice=0.8047522725330458`; this is saved
-metadata, not reproduced accuracy. Its original metric includes background and
-scores classes absent in both masks as 1. Its annotation and split history still
-need independent evidence.
+This is research software for inspecting numerical outputs and labelled images.
+It does not diagnose disease or assign stages. Checkpoint class meanings and
+training-data identity are unverified. Index scores are not calibrated disease
+probabilities. Scientific performance claims require licensed labelled data and
+independent evaluation. Generated samples test software behavior only.
 
-The source mask-combination code overwrites region IDs wherever the capsule is
-nonzero. This defect was reproduced on public masks from a matching candidate
-dataset format. That supports the defect finding; it does not prove the
-checkpoint used that exact dataset or establish medical label meanings.
-
-Read [architecture](docs/ARCHITECTURE.md), [model card](docs/MODEL_CARD.md),
-[data](docs/DATA.md), [provenance](docs/PROVENANCE.md) and
-[verification](docs/VERIFICATION.md).
-
-## Ownership and credit
-
-Prepared for Alfarouk Salah Elkashef to maintain and explain. The upstream
-Swin V2, EfficientNet and ConvNeXt architectures and their libraries remain
-credited to their authors. No medical dataset, webcam image, bundled Windows
-environment or unrelated YOLO checkout is redistributed.
-
-The custom source did not state a license. The repository and release assets
-remain private; no claim of sole authorship, collaborator rights or permission
-for public redistribution is invented.
+Read the [architecture](docs/ARCHITECTURE.md), [model card](docs/MODEL_CARD.md),
+[data guide](docs/DATA.md), [test guide](docs/VERIFICATION.md) and
+[attribution and use notes](docs/PROVENANCE.md).
