@@ -4,6 +4,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
 from io import BytesIO
 import json
+from pathlib import Path
 import threading
 from urllib.parse import urlparse
 import numpy as np
@@ -51,7 +52,13 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = urlparse(self.path).path
         if path == "/api/health":
-            return self.send(200, {"status": "ok", "model_checkpoint_supplied": False, "research_only": True})
+            from .supplied import model_status
+            count = sum(s["installed"] for s in model_status(getattr(self.server, "models_directory", Path("models"))))
+            return self.send(200, {"status": "ok", "model_checkpoint_supplied": count > 0,
+                                   "installed_supplied_models": count, "research_only": True})
+        if path == "/api/models":
+            from .supplied import model_status
+            return self.send(200, {"models": model_status(getattr(self.server, "models_directory", Path("models")))})
         mapping = {"/": ("index.html", "text/html; charset=utf-8"),
                    "/app.js": ("app.js", "text/javascript"), "/style.css": ("style.css", "text/css")}
         if path not in mapping:
@@ -80,20 +87,30 @@ class Handler(BaseHTTPRequestHandler):
                     image, mask = decode_png(payload["image"]), decode_png(payload["mask"], label=True)
                     spacing = payload.get("spacing")
                     spacing = Spacing(float(spacing[0]), float(spacing[1])) if spacing else None
-                    result = analyze(image, mask, spacing=spacing)
+                    result = analyze(image, mask, spacing=spacing,
+                                     label_schema_id=payload.get("label_schema_id", "corrected-five"))
+                elif self.path == "/api/run-model":
+                    from .supplied import run_model
+                    image = payload["image"]
+                    if not isinstance(image, str) or not image.startswith("data:image/"):
+                        raise ValueError("Supply an image data URL")
+                    content = base64.b64decode(image.split(",", 1)[1], validate=True)
+                    result = run_model(payload["model_id"], content,
+                        getattr(self.server, "models_directory", Path("models")), profile_id=payload["profile_id"])
                 else:
                     return self.send(404, {"error": "Not found"})
                 return self.send(200, result)
             finally:
                 self.slots.release()
-        except (ValueError, KeyError, TypeError, IndexError, OSError, Image.DecompressionBombError) as exc:
+        except (ValueError, KeyError, TypeError, IndexError, OSError, ImportError, Image.DecompressionBombError) as exc:
             return self.send(400, {"error": str(exc)})
 
 
-def serve(host="127.0.0.1", port=8782):
+def serve(host="127.0.0.1", port=8782, models_directory=Path("models")):
     if host not in {"127.0.0.1", "localhost", "::1"}:
         raise ValueError("This research workbench binds to localhost only")
     server = ThreadingHTTPServer((host, port), Handler)
+    server.models_directory = Path(models_directory).resolve()
     server.daemon_threads = True
     print(f"CKD research workbench: http://{host}:{server.server_port} (Ctrl+C to stop)", flush=True)
     try:

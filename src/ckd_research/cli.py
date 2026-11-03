@@ -23,6 +23,7 @@ def parser():
     a.add_argument("--reference", type=Path)
     a.add_argument("--spacing", type=float, nargs=2, metavar=("ROW_MM", "COLUMN_MM"))
     a.add_argument("--depth-mm", type=float)
+    a.add_argument("--label-schema", choices=["corrected-five", "source-four"], default="corrected-five")
     a.add_argument("--output", type=Path, required=True)
     t = commands.add_parser("train", help="Train from an explicit patient-separated data manifest")
     t.add_argument("--manifest", type=Path, required=True)
@@ -46,6 +47,21 @@ def parser():
         imp.add_argument("--" + key, type=Path, required=True)
     web = commands.add_parser("serve", help="Open the local research workbench")
     web.add_argument("--port", type=int, default=8782)
+    web.add_argument("--models-dir", type=Path, default=Path("models"))
+    models = commands.add_parser("models", help="List supplied checkpoints, available files and explicit input profiles")
+    models.add_argument("--models-dir", type=Path, default=Path("models"))
+    fetch = commands.add_parser("fetch-models", help="Verify/download private release assets using existing gh authentication")
+    fetch.add_argument("--models-dir", type=Path, default=Path("models"))
+    fetch.add_argument("--include-originals", action="store_true")
+    convert = commands.add_parser("import-models", help="Convert the three exact supplied originals without unrestricted pickle")
+    convert.add_argument("--source-dir", type=Path, required=True)
+    convert.add_argument("--models-dir", type=Path, required=True)
+    run = commands.add_parser("run-model", help="Run a supplied checkpoint with an explicitly selected research input profile")
+    run.add_argument("--id", required=True)
+    run.add_argument("--image", type=Path, required=True)
+    run.add_argument("--profile", required=True)
+    run.add_argument("--models-dir", type=Path, default=Path("models"))
+    run.add_argument("--output", type=Path, required=True)
     return p
 
 
@@ -60,7 +76,7 @@ def main(argv=None):
             result = analyze(load_image(args.image), load_mask(args.mask),
                              spacing=Spacing(*args.spacing) if args.spacing else None,
                              reference=load_mask(args.reference) if args.reference else None,
-                             depth_mm=args.depth_mm)
+                             depth_mm=args.depth_mm, label_schema_id=args.label_schema)
             write_result(result, args.output, protected=[args.image, args.mask, args.reference])
             print(json.dumps(result["report"], indent=2))
         elif args.command == "predict":
@@ -96,7 +112,22 @@ def main(argv=None):
             print(f"Analyzed {len(samples)} samples; exports saved to {args.output}")
         elif args.command == "serve":
             from .server import serve
-            serve(port=args.port)
+            serve(port=args.port, models_directory=args.models_dir)
+        elif args.command == "models":
+            from .supplied import model_status
+            print(json.dumps(model_status(args.models_dir), indent=2))
+        elif args.command == "fetch-models":
+            from .supplied import fetch_models
+            print(json.dumps({"verified_files": fetch_models(args.models_dir, include_originals=args.include_originals)}, indent=2))
+        elif args.command == "import-models":
+            from .supplied import registry, convert_original
+            for spec in registry()["models"]:
+                print(json.dumps(convert_original(spec["id"], args.source_dir / spec["original"]["name"], args.models_dir)))
+        elif args.command == "run-model":
+            from .supplied import run_model
+            result = run_model(args.id, args.image.read_bytes(), args.models_dir, profile_id=args.profile)
+            write_result(result, args.output, "model-output", protected=[args.image])
+            print(json.dumps(result["report"], indent=2))
         return 0
     except (ValueError, FileNotFoundError, OSError, ImportError, Image.DecompressionBombError) as exc:
         print(f"Error: {exc}", file=sys.stderr)

@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 from .analysis import measure, overlap
-from .contracts import Spacing, validate_mask
+from .contracts import Spacing, validate_mask, MASK_SCHEMAS
 from .dataset import preprocess_image
 from .demo import fixture
 from .io import load_image, render_overlay, save_png
@@ -18,12 +18,19 @@ def png_data(array):
     return "data:image/png;base64," + base64.b64encode(stream.getvalue()).decode()
 
 
-def analyze(image, mask, *, spacing=None, reference=None, source="supplied_label_mask", depth_mm=None):
-    mask = validate_mask(mask)
+def analyze(image, mask, *, spacing=None, reference=None, source="supplied_label_mask", depth_mm=None,
+            label_schema_id="corrected-five"):
+    if label_schema_id not in MASK_SCHEMAS:
+        raise ValueError("Unknown annotation schema")
+    labels = MASK_SCHEMAS[label_schema_id]
+    mask = validate_mask(mask, label_ids=labels)
+    if reference is not None and label_schema_id != "corrected-five":
+        raise ValueError("Reference evaluation needs an explicitly supported matching label contract")
     if image.shape != mask.shape:
         raise ValueError("Image and label mask sizes must match")
-    report = {"source": source, "shape": list(mask.shape), "labels_are_prediction": source == "checkpoint_model_output",
-              "measurements": measure(mask, spacing, depth_mm),
+    report = {"source": source, "shape": list(mask.shape), "labels_are_prediction": source in {"checkpoint_model_output", "supplied_four_class_model_output"},
+              "task": "segmentation", "label_schema_id": label_schema_id, "labels": labels,
+              "measurements": measure(mask, spacing, depth_mm, labels=labels),
               "evaluation": overlap(mask, reference) if reference is not None else None,
               "scope": "Research software; no diagnosis, disease staging or clinical validation"}
     return {"report": report, "image": png_data(image), "mask": png_data(mask),
@@ -58,11 +65,15 @@ def predict(model_manifest, image_path, *, spacing=None):
 
 def write_result(result, output, stem="analysis", *, protected=()):
     output = Path(output)
-    targets = {output / f"{stem}.{key}.png" for key in ["image", "mask", "overlay"]} | {output / f"{stem}.json"}
+    keys = [key for key in ["image", "mask", "overlay"] if key in result]
+    stale = [output / f"{stem}.{key}.png" for key in ["image", "mask", "overlay"] if key not in keys]
+    if any(path.exists() for path in stale):
+        raise ValueError("Output contains artifacts from a different result type; choose a separate result directory")
+    targets = {output / f"{stem}.{key}.png" for key in keys} | {output / f"{stem}.json"}
     if {p.resolve() for p in targets} & {Path(p).resolve() for p in protected if p is not None}:
         raise ValueError("Output would overwrite an input file; choose a separate result directory")
     output.mkdir(parents=True, exist_ok=True)
-    for key in ["image", "mask", "overlay"]:
+    for key in keys:
         data = base64.b64decode(result[key].split(",", 1)[1], validate=True)
         (output / f"{stem}.{key}.png").write_bytes(data)
     (output / f"{stem}.json").write_text(json.dumps(result["report"], indent=2, allow_nan=False) + "\n")

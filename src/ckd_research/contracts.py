@@ -4,6 +4,10 @@ import math
 import numpy as np
 
 LABELS = {0: "background", 1: "region_1", 2: "region_2", 3: "region_3", 4: "capsule_only"}
+MASK_SCHEMAS = {
+    "corrected-five": LABELS,
+    "source-four": {0: "background", 1: "source_class_1", 2: "source_class_2", 3: "source_class_3"},
+}
 COLORS = np.array([[0, 0, 0], [237, 158, 67], [65, 178, 153], [122, 119, 225], [76, 149, 224]], dtype=np.uint8)
 MAX_PIXELS = 16_000_000
 
@@ -22,12 +26,13 @@ class Spacing:
         return Spacing(self.row_mm * old_shape[0] / new_shape[0], self.column_mm * old_shape[1] / new_shape[1])
 
 
-def validate_mask(mask):
+def validate_mask(mask, *, label_ids=None):
     mask = np.asarray(mask)
     if mask.ndim != 2 or not mask.size or mask.size > MAX_PIXELS:
         raise ValueError("A non-empty two-dimensional label mask is required (maximum16 million pixels)")
-    if not np.issubdtype(mask.dtype, np.integer) or not np.isin(mask, list(LABELS)).all():
-        raise ValueError("Label masks must contain integer IDs 0, 1, 2, 3, 4; use import-triplets for source masks")
+    allowed = list(LABELS if label_ids is None else label_ids)
+    if not np.issubdtype(mask.dtype, np.integer) or not np.isin(mask, allowed).all():
+        raise ValueError("Label mask IDs do not match the selected annotation schema")
     return mask.astype(np.uint8)
 
 

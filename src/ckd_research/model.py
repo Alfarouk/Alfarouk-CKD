@@ -23,15 +23,16 @@ def default_architecture():
             "decoder_channels": [512, 256, 128, 64, 32], "num_classes": 5}
 
 
-def validate_architecture(value):
+def validate_architecture(value, *, expected_num_classes=5):
     expected = set(default_architecture())
     if not isinstance(value, dict) or set(value) != expected:
         raise ValueError("Unsupported architecture fields")
     size, embed = value["image_size"], value["embed_dim"]
     if type(size) is not int or size < 32 or size > 512 or size % 32:
         raise ValueError("Model image size must be a multiple of32 between32 and512")
-    if type(embed) is not int or not 12 <= embed <= 96 or value["num_classes"] != 5:
-        raise ValueError("This workbench requires a bounded five-class Swin V2 model")
+    if (expected_num_classes not in {4, 5} or type(embed) is not int
+            or not 12 <= embed <= 96 or value["num_classes"] != expected_num_classes):
+        raise ValueError("Model output count does not match its explicit task contract")
     depths, heads, decoder = value["depths"], value["num_heads"], value["decoder_channels"]
     if (not all(isinstance(v, list) for v in [depths, heads, decoder])
             or len(depths) != 4 or any(type(n) is not int or not 1 <= n <= 6 for n in depths)
@@ -43,10 +44,10 @@ def validate_architecture(value):
     return value
 
 
-class SwinV2Segmentation(nn.Module):
-    def __init__(self, architecture=None, *, pretrained_backbone=None):
+class _SwinV2Architecture(nn.Module):
+    def __init__(self, architecture, *, num_classes, pretrained_backbone=None):
         super().__init__()
-        self.architecture = validate_architecture(architecture or default_architecture())
+        self.architecture = validate_architecture(architecture, expected_num_classes=num_classes)
         a = self.architecture
         config = Swinv2Config(image_size=a["image_size"], embed_dim=a["embed_dim"], depths=a["depths"],
                               num_heads=a["num_heads"], window_size=a["window_size"], drop_path_rate=0.0)
@@ -82,7 +83,21 @@ class SwinV2Segmentation(nn.Module):
         return F.interpolate(logits, size=spatial, mode="bilinear", align_corners=False)
 
 
+class SwinV2Segmentation(_SwinV2Architecture):
+    """Corrected five-label experiment contract; unchanged training API."""
+    def __init__(self, architecture=None, *, pretrained_backbone=None):
+        super().__init__(architecture or default_architecture(), num_classes=5,
+                         pretrained_backbone=pretrained_backbone)
+
+
+class SourceSwinV2Segmentation(_SwinV2Architecture):
+    """Separate source-compatible four-output model, never a five-label alias."""
+    def __init__(self):
+        super().__init__({**default_architecture(), "num_classes": 4}, num_classes=4)
+
+
 def save_checkpoint(model, directory, *, training_record):
+    validate_architecture(model.architecture)
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     weights = directory / "model.safetensors"
@@ -98,7 +113,7 @@ def save_checkpoint(model, directory, *, training_record):
 def load_checkpoint(manifest_path):
     manifest_path = Path(manifest_path).resolve()
     if not manifest_path.is_file():
-        raise FileNotFoundError("Trained model manifest is missing. The original kidney checkpoint was not supplied.")
+        raise FileNotFoundError("Five-label experiment manifest is missing. Use run-model for the separately supplied checkpoints.")
     manifest = json.loads(manifest_path.read_text())
     if (not isinstance(manifest, dict) or manifest.get("format_version") != 1
             or manifest.get("preprocessing") != "grayscale_bilinear_resize_divide255"):

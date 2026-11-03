@@ -37,3 +37,22 @@ The clean repo excludes bundled environments, bytecode, IDE paths, unrelated
 images, a private webcam photo, patient-derived analysis plots and model blobs.
 Original archive hashes and the detailed recovery evidence are retained in the
 private LifeFlow profile rather than exposed in this public-facing workbench.
+
+
+## Separately supplied model files
+
+On 3 November 2026 three model files were supplied separately from the archive:
+`best_swinv2_kidney.pth`, `biopsy_pathologist.pth` and
+`kidney_sclerosis_convnext.pth`. The first has the source Swin tensor layout
+and saved training configuration. The other two strictly fit the documented
+research runtimes but contain only tensors, with no labels or input recipe.
+
+These files establish supplied artifacts, not who independently trained each
+model or its clinical accuracy. Exact originals and converted safetensors are
+kept in the private repository’s release assets. Source licensing and dataset
+rights remain separate from the ability to execute a tensor-compatible model.
+
+A controlled test also found that different parameterless classifier-head
+operations can accept exactly the same tensors while giving different outputs.
+The documented runtime assumption is therefore kept separate from original
+training provenance.

@@ -21,11 +21,12 @@ def overlap(prediction, reference):
             "absent_class_rule": "Both masks absent: null, excluded from macro average"}
 
 
-def measure(mask, spacing: Spacing | None = None, depth_mm: float | None = None):
-    mask = validate_mask(mask)
+def measure(mask, spacing: Spacing | None = None, depth_mm: float | None = None, *, labels=None):
+    labels = LABELS if labels is None else labels
+    mask = validate_mask(mask, label_ids=labels)
     foreground = (mask > 0).astype(np.uint8)
     count = int(foreground.sum())
-    per_class = {name: int(np.count_nonzero(mask == label)) for label, name in LABELS.items()}
+    per_class = {name: int(np.count_nonzero(mask == label)) for label, name in labels.items()}
     result = {"label_pixels": per_class, "foreground_pixels": count,
               "coverage_fraction": count / mask.size, "units": "pixels", "calibration": None,
               "major_axis": None, "minor_axis": None, "area": 0.0,

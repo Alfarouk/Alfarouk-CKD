@@ -2,50 +2,63 @@
 
 ```mermaid
 flowchart LR
-  A[Image and labelled mask] --> B[Shape and label checks]
-  C[Optional trained model manifest] --> D[Swin V2 inference]
-  D --> B
-  B --> E[Geometry in original image coordinates]
-  F[Known row and column spacing] --> E
-  E --> G[JSON and CSV]
-  B --> H[Overlay PNG]
-  G --> I[Local workbench]
-  H --> I
+  A[Image plus explicit input profile] --> B[Supplied checkpoint registry]
+  B --> C[Hash and strict tensor checks]
+  C --> D[One local CPU model]
+  D --> E[Four neutral source mask IDs]
+  D --> F[Two unknown classifier indices]
+  E --> G[Pixel geometry and overlay]
+  F --> H[Raw logits and index scores]
+  I[Manual mask / corrected five-label experiment] --> J[Separate five-label contract]
+  J --> G
+  G --> K[Local UI and JSON / PNG exports]
+  H --> K
 ```
 
-`contracts.py` owns the neutral label IDs and valid physical spacing. Every
-workflow uses it. `dataset.py` imports the original three-file layout, validates
-patient separation and supplies the same grayscale resize/normalization for
-training and prediction. There is no inference-only CLAHE step.
+`model_registry.json` owns the three supplied identities, exact original and
+safetensors hashes, private release location and permitted input choices.
+`supplied.py` owns their strict offline builders, reviewed restricted import,
+input preparation and common inference runner. CLI and HTTP use that same
+runner. Importing the UI does not load PyTorch, a model or a remote asset.
 
-`model.py` preserves the source backbone/decoder design while using spatial
-hidden states rather than guessing a square grid from token counts. The model
-returns logits at the input size. `training.py` uses explicit splits, a fixed
-seed, two CPU threads and no worker subprocesses. It records the data-manifest
-hash, initialization, epochs and this run's validation metrics.
+A process lock permits one supplied model operation at a time; tensors and
+models are released after each operation. CPU model work uses two threads.
+No pretrained model or dataset is downloaded implicitly. The fetch command
+uses existing GitHub CLI authentication and verifies assets in a temporary
+folder before making them available.
 
-Checkpoints contain `model.safetensors` and `model.json`, with an architecture,
-label contract, preprocessing identifier, weight hash and training record.
-Loading validates that manifest and strict parameter shapes. It does not
-silently download a model, change labels or allow arbitrary pickle objects.
-`import_legacy_checkpoint` is an explicit trusted-state-dictionary conversion
-function using `weights_only=True`; incompatible four-class weights fail.
+`contracts.py` separates `source-four` from `corrected-five`. The source model
+has four output channels. Corrected training still requires five. Reports and
+legends carry their schema ID and never turn a four-channel checkpoint into a
+five-label model. Geometry is reusable; anatomy names are not inferred.
 
-`pipeline.py` returns predictions to original image resolution before measuring
-them. Row and column spacing can differ. Area is foreground pixel count times
-row/column spacing. Major/minor axes use a rotated rectangle in calibrated
-coordinates. An independently supplied third dimension is required for an
-ellipsoid volume approximation. The old default-depth disease rules and
-centre-to-cortex distance estimate are not used.
+`model.py` shares the Swin backbone/decoder mechanics between explicit four-
+and five-output classes. It uses spatial hidden states rather than guessing a
+square token grid. `training.py` remains the five-label experiment with fixed
+seed, explicit patient splits, two CPU threads and no worker subprocesses.
 
-`server.py` serves packaged local HTML/CSS/JS and checked image/mask uploads.
-Requests are size-bounded, analyses limited to two at a time, and the server
-binds only to localhost. It never accepts filesystem paths from the browser.
-`cli.py` is the same analysis layer for batch work and reproducible exports.
+`dataset.py` preserves the original three-file layout without overwriting
+region IDs. The corrected training and prediction use the same preprocessing.
+The supplied source checkpoint has separate, named training/inference recipes;
+their CLAHE discrepancy remains visible.
 
-## Why not upgrade the bundled YOLO checkout?
+Training manifests contain architecture, labels, input contract, weight hash
+and this run’s record. Supplied models use the separate fixed registry. Both
+paths load safetensors strictly. Only the explicit importer reads the three
+hash-bound original `.pth` files with `weights_only=True`; a narrowly scoped
+trusted NumPy scalar/dtype allowlist handles the Swin metric. No custom code is
+allowlisted and unrestricted pickle is never used.
 
-The archive's YOLO files are an upstream checkout, while its custom kidney
-model is Swin V2. These are different tasks. Replacing the model with a newer
-object detector would not recover the kidney segmentation workflow. The
-unrelated checkout and 900 MB of Windows packages are excluded from this repo.
+`pipeline.py` returns masks to the original image size before measuring.
+Spacing can differ by axis; physical units require actual calibration. An
+independently supplied third dimension is required for ellipsoid volume. No
+legacy disease rules or assumed scan depth are used.
+
+`server.py` binds to localhost, bounds request sizes, rejects cross-origin
+requests and accepts image bytes rather than filesystem paths. The browser
+records an explicit input choice before a model run. Classifier JSON contains
+both logits and index scores; it contains no disease label or ensemble verdict.
+
+The old YOLO checkout is unrelated to these custom model paths. Upgrading that
+object detector would not recover the supplied segmentation or classifier work.
+It and the bundled Windows environment remain excluded.

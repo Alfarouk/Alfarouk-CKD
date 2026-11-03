@@ -47,8 +47,8 @@ implicit image-only rotations that could misalign a pair.
 
 ## Original data recovery
 
-No original image dataset, source annotation CSV or trained kidney checkpoint
-was included. The Windows config refers to a local `Normal` folder and the
+No original image dataset or source annotation CSV was included. The trained
+four-class checkpoint was supplied separately on 3 November 2026. The Windows config refers to a local `Normal` folder and the
 training script to a generic Kaggle `US_Dataset_prepared` path. Those paths do
 not identify a verified dataset release.
 
@@ -56,8 +56,26 @@ The structure resembles the authors' [Open Kidney Ultrasound Data Set](https://g
 That is a possible lead, **not a confirmed attribution**. Its official page
 requires registration and manual review before image access and restricts use
 to non-commercial purposes. No gated images or mirror downloads are bundled
-here. Its published benchmark weights are not the missing custom Swin model.
+here. Its published benchmark weights are not the separately supplied custom Swin model.
 Use the authors' annotation guide and permissions if that source is confirmed.
 
 The generated sample has no patients and no scientific validation value. It
 exists to exercise the import, geometry, export, UI and test flows offline.
+
+
+## Supplied checkpoint versus candidate annotations
+
+The separately supplied Swin file has four outputs and a saved Kaggle path
+`usdata/US_Dataset_80_20`. This is a stronger source-code link; it still does not
+identify the creator, exact images or split membership.
+
+The candidate kidneyUS source fills the capsule as a binary mask and encodes
+regions as CEC 1, medulla 2 and cortex 3. The recovered combination logic overwrites
+almost all those internal pixels when run on public mask pairs from that
+format. This confirms a defect on that matching format; it does not prove the
+checkpoint used those particular masks. The supplied model’s four IDs remain
+neutral rather than borrowing the candidate’s anatomical names.
+
+Classifier weights contain no dataset or class-name metadata. No gated image
+source is bypassed or redistributed. Generated profile probes remain software
+experiments; an unlabelled input cannot establish class order or accuracy.

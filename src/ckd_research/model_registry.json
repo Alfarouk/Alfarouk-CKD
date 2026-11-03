@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "repository": "Alfarouk/Alfarouk-CKD",
+  "release": "v1.1.0",
+  "distribution": "Private release assets; no weights are stored in Git.",
+  "models": [
+    {
+      "id": "source-swin-four",
+      "title": "Supplied Swin V2 \u00b7 four source classes",
+      "task": "segmentation",
+      "architecture": "Source-compatible Swin V2 tiny + five upsampling blocks",
+      "class_count": 4,
+      "input_profiles": [
+        "source-clahe-256",
+        "source-training-256"
+      ],
+      "original": {
+        "name": "best_swinv2_kidney.pth",
+        "sha256": "4238af3a0ef7c52cd5cb2d7667f0e76d742feb9dc1ed4d536aa2fb53572a9342"
+      },
+      "weights": {
+        "name": "source-swin-four.safetensors",
+        "sha256": "b1a504c8816c6ee737224c1dff7461d0d7facbe2666b866b9355b04ac1ecde84",
+        "bytes": 132038352
+      },
+      "runtime_config": {
+        "image_size": 256,
+        "embed_dim": 96,
+        "depths": [
+          2,
+          2,
+          6,
+          2
+        ],
+        "heads": [
+          3,
+          6,
+          12,
+          24
+        ],
+        "window_size": 8,
+        "decoder_channels": [
+          512,
+          256,
+          128,
+          64,
+          32
+        ],
+        "layer_norm_eps": 1e-05,
+        "output_count": 4,
+        "origin": "Recovered source architecture and strict tensor compatibility; library runtime configuration is explicit."
+      },
+      "semantic_limits": "Four source IDs remain separate from the corrected five-label experiment. Source anatomy interpretations conflict; no disease or calibrated anatomy inference.",
+      "saved_training_metadata": {
+        "epoch_zero_based": 40,
+        "val_dice": 0.8047522725330458,
+        "scope": "Value recorded inside the supplied checkpoint; not independently validated performance."
+      },
+      "strict_tensor_compatibility_verified": true
+    },
+    {
+      "id": "biopsy-efficientnet",
+      "title": "Supplied biopsy file \u00b7 two raw indices",
+      "task": "classification",
+      "architecture": "TorchVision EfficientNet-B4 with nested two-output linear head",
+      "class_count": 2,
+      "input_profiles": [
+        "research-rgb-224",
+        "research-rgb-380",
+        "research-rgb-224-unit"
+      ],
+      "original": {
+        "name": "biopsy_pathologist.pth",
+        "sha256": "8c4ac72408f4ff1dc3adb2862f8eb1e3a3e60a33d4bde76d18d4f8528ba051d5"
+      },
+      "weights": {
+        "name": "biopsy-efficientnet.safetensors",
+        "sha256": "b95f98cdb7f0ede97c9684cf5550b11d4fd6282d8ec08b32394d4714bccc97da",
+        "bytes": 70779672
+      },
+      "runtime_config": {
+        "builder": "torchvision.models.efficientnet_b4",
+        "pretrained_weights": null,
+        "normalization_eps": 0.001,
+        "normalization_momentum": 0.01,
+        "activation": "SiLU library backbone",
+        "classifier_head": "classifier[1]=Sequential(Identity,Linear(1792,2)); unparameterized operation is a research assumption",
+        "mode": "eval"
+      },
+      "semantic_limits": "Class meanings/order, original input recipe and parameterless head operations are absent. Raw indices only; selected preprocessing is a research choice.",
+      "strict_tensor_compatibility_verified": true
+    },
+    {
+      "id": "sclerosis-convnext",
+      "title": "Supplied sclerosis file \u00b7 two raw indices",
+      "task": "classification",
+      "architecture": "Transformers ConvNeXt tiny with two-output classifier",
+      "class_count": 2,
+      "input_profiles": [
+        "research-rgb-224",
+        "research-rgb-380",
+        "research-rgb-224-unit"
+      ],
+      "original": {
+        "name": "kidney_sclerosis_convnext.pth",
+        "sha256": "ae70f87e103f9bc4132ab33f7529ac05d66e86b4ca0eab0b1639d27425c1e47d"
+      },
+      "weights": {
+        "name": "sclerosis-convnext.safetensors",
+        "sha256": "03d280a2bffa96e0d22fb622f78fba8abb7d13c50721229be7bf623c7ff2d87e",
+        "bytes": 111307888
+      },
+      "runtime_config": {
+        "builder": "transformers.ConvNextForImageClassification",
+        "depths": [
+          3,
+          3,
+          9,
+          3
+        ],
+        "hidden_sizes": [
+          96,
+          192,
+          384,
+          768
+        ],
+        "activation": "gelu",
+        "layer_norm_eps": 1e-12,
+        "layer_scale_init_value": 1e-06,
+        "num_labels": 2,
+        "mode": "eval",
+        "origin": "Tensor-inferred architecture; parameterless configuration is an explicit research runtime, not recovered training metadata."
+      },
+      "semantic_limits": "Class meanings/order, original input recipe and training configuration are absent. Filename is not a clinical label contract.",
+      "strict_tensor_compatibility_verified": true
+    }
+  ]
+}

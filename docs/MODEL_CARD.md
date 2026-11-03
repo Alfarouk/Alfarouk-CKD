@@ -1,39 +1,87 @@
-# Model card
+# Supplied model card
 
-**Purpose:** engineering and research experiments on labelled kidney ultrasound
-images. No diagnostic indication or clinical deployment is claimed.
+These models support local engineering and research inspection. There is no
+diagnostic indication, disease staging or clinical deployment claim.
 
-**Architecture:** Swin Transformer V2 tiny backbone, followed by five learned
-upsampling blocks and a pixel classifier. This preserves the source design;
-Swin V2 is a third-party architecture, not a new architecture invented here.
-The corrected task has five labels described in the data guide.
+| Artifact | Verified tensor-compatible runtime | Outputs | Input knowledge |
+| --- | --- | --- | --- |
+| best_swinv2_kidney.pth | Swin V2 tiny + five decoder blocks | Four pixel indices | Two differing recipes recovered from source code |
+| biopsy_pathologist.pth | TorchVision EfficientNet-B4 + nested linear head | Two raw indices | Original resize/crop/channels/normalization unknown |
+| kidney_sclerosis_convnext.pth | Transformers ConvNeXt tiny | Two raw indices | Original image recipe and class order unknown |
 
-**Available weights:** no trained kidney model is included. The supplied archive
-contains a file called `sam_b.pt`, but that is not the `best_swinv2_kidney.pth`
-the inference code expects. It was not unpickled, trusted or published as a
-kidney model. Neither an ImageNet backbone nor random weights establish kidney
-segmentation performance.
+The registry pins original and converted hashes. Operational files are
+safetensors in a private release, outside Git. Strict tensor loading and finite
+checks passed for all three. This establishes compatible names/shapes, not the
+original parameterless operations, complete training graph or clinical value.
 
-**Training and evaluation:** use patient-separated manifests and a held-out test
-set. Training writes this run's loss and foreground macro Dice, with per-class
-overlap available for labelled predictions. An absent class in both masks has
-a null score and is excluded from the macro average. A single synthetic run
-checks the program; it cannot provide scientific accuracy or generalization.
+## Four-class source Swin
 
-**Measurements:** physical units require actual image calibration. The workbench
-does not infer pixel spacing from an assumed scan depth, assign anatomy names
-to unverified IDs, estimate cortex thickness from distance to its inner edge,
-or infer disease severity from image dimensions. Any future medical use needs
-the appropriate clinical, data-quality and regulatory validation.
+The supplied checkpoint matches the recovered source model tensors. It records
+`epoch=40`, four classes, a 256 × 256 target, batch size 8, learning rate 0.0002 and 50
+planned epochs. The source saves its loop index, so 40 is reported as stored,
+not rewritten as 40 completed epochs.
 
-**Known missing source assets:** original labelled dataset and its annotation
-guide, trained kidney checkpoint, data split/patient identifiers and any
-source-era training history. No performance figures are reconstructed from
-screenshots or invented to fill these gaps.
+Its stored validation Dice is 0.8047522725330458. The original metric averages
+all four classes including background and assigns 1 when a class is absent from
+both prediction and target. This value has not been independently reproduced
+and must not be compared directly with the corrected foreground-macro metric.
+
+The source training recipe is Pillow grayscale, bicubic 256 resize and /255.
+The source inference recipe is OpenCV grayscale, CLAHE (2.0, 8 × 8), linear 256
+resize and /255. Both are explicit choices in the workbench; neither is called
+a proven original training match for every use of these supplied weights.
+
+Four neutral source IDs remain separate from the five corrected labels. The
+original scripts disagree about anatomy. Their combination step can replace
+internal region labels with capsule class 3. This was reproduced on the public
+masks in a closely matching candidate dataset, whose original images require
+access approval. Exact checkpoint-dataset identity remains unverified.
+
+Six synthetic-input runs across both recipes show that the input choice changes
+outputs. Class 2 never won a pixel in those probes, while class 1 did. This is not
+a clinical experiment and does not prove a particular training collapse.
+
+## Classifiers
+
+Each supplied classifier stores only tensors. Neither file records class
+names/order, input recipe, dataset, split, training history or accuracy.
+Reassigning the two output labels leaves the same weight tensors intact, so
+weights alone cannot determine which semantic label belongs to an index.
+
+The selected runtime is explicit. EfficientNet uses the library B4 backbone
+and a nested Identity→Linear head. The Identity operation is an assumption:
+parameterless head operations are not recoverable from state-dictionary keys.
+ConvNeXt uses the recorded tiny widths/depths with GELU and layer-normalization
+epsilon 1e-12. These choices are documented research settings, not hidden claims
+about the original training code.
+
+A controlled recovery check loaded the same biopsy tensors into Identity and
+ReLU head variants. Both matched every tensor strictly, yet produced different
+outputs on generated inputs. This shows why those stored tensors cannot uniquely
+identify the missing parameterless operation; it does not select an original variant.
+
+RGB224/ImageNet normalization, RGB380/ImageNet normalization and RGB224/unit
+range are named experiment profiles. Every result stores the actual settings,
+raw logits and softmax index scores. Those scores are neither calibrated
+clinical probabilities nor proof of the correct original profile. No cross-model
+ensemble or disease verdict is produced.
+
+## Corrected five-label training
+
+The separate experiment keeps five labels and preserves the input region IDs.
+Use patient-separated manifests and a held-out test set. It writes this run’s
+loss and foreground macro Dice. An absent class in both masks is null and
+excluded from that macro average. Generated samples test software only.
+
+Physical units require actual image calibration. No assumed scan depth,
+centre-to-cortex heuristic or image-dimension disease rules are restored.
+Original labelled data, annotation/split history and independent evaluation are
+still needed for scientific performance claims.
 
 ## Primary technical references
 
-- [Transformers Swin V2 documentation](https://huggingface.co/docs/transformers/model_doc/swinv2)
-- [Microsoft's published Swin V2 tiny backbone](https://huggingface.co/microsoft/swinv2-tiny-patch4-window8-256)
-- [PyTorch serialization guidance](https://docs.pytorch.org/docs/stable/notes/serialization)
-- [Open Kidney US authors' access and license information](https://github.com/rsingla92/kidneyUS)
+- [PyTorch restricted serialization](https://docs.pytorch.org/docs/2.15/notes/serialization.html)
+- [Transformers Swin V2](https://huggingface.co/docs/transformers/model_doc/swinv2)
+- [TorchVision EfficientNet-B4](https://docs.pytorch.org/vision/main/models/generated/torchvision.models.efficientnet_b4.html)
+- [Transformers ConvNeXt](https://huggingface.co/docs/transformers/model_doc/convnext)
+- [Candidate kidneyUS source and access conditions](https://github.com/rsingla92/kidneyUS)
