@@ -1,8 +1,8 @@
 # Kidney Segmentation Lab
 
-A local workbench for model inference, labelled-image analysis and segmentation
-experiments. Run Swin V2, EfficientNet-B4 and ConvNeXt models, inspect their
-outputs, measure labelled regions and export results from the browser or CLI.
+Kidney Segmentation Lab runs Swin V2, EfficientNet-B4 and ConvNeXt models and
+measures regions from label masks. The browser and CLI use the same model and
+analysis code. Both can export the image, output and settings for each run.
 
 ![Local model inference on a generated test image](docs/images/workbench.jpg)
 
@@ -33,10 +33,10 @@ PyTorch. Images are processed locally; the server binds to localhost.
 
 ## Run inference
 
-In **Run a model**, choose a model, input profile and image. The result keeps its
-model name and input settings when you prepare the next run. Downloads contain
-the weight hash, runtime configuration, input settings and numerical output.
-Only one model is loaded at a time.
+In **Run a model**, choose a model, input profile and image. Each result keeps its
+own model name and input settings, even when you change the next selection.
+The downloaded report includes the weight hash, model configuration, input
+settings and output. The workbench loads one model at a time.
 
 | Model | Output | Input profiles |
 | --- | --- | --- |
@@ -57,9 +57,10 @@ ckd run-model --id sclerosis-convnext --profile research-rgb-224 \
 ```
 
 The two Swin profiles use different grayscale decoding and resize methods.
-The CLAHE profile also changes local contrast. Classifier profiles are explicit
-research settings; their training input recipe and output class order are not
-documented. See the [model card](docs/MODEL_CARD.md) before interpreting results.
+The CLAHE profile also changes local contrast. For the classifiers, the
+profiles compare image sizes and normalization settings. Their original
+training recipe and class order are undocumented. See the
+[model card](docs/MODEL_CARD.md) before interpreting results.
 
 If you have the checkpoint files listed in the registry, convert them locally:
 
@@ -67,9 +68,10 @@ If you have the checkpoint files listed in the registry, convert them locally:
 ckd import-models --source-dir /path/to/checkpoints --models-dir models
 ```
 
-Import accepts only the registered hashes. Restricted tensor loading checks
-names, shapes and finite values before writing safetensors. Input files stay
-unchanged. The private asset release also contains the `.pth` files; use
+Import accepts only files whose hashes match the registry. It loads tensors
+with restricted loading, checks their names, shapes and finite values, then
+writes safetensors files. It leaves the input files unchanged. The private
+asset release also contains the `.pth` files; use
 `ckd fetch-models --models-dir models --include-originals` to download them.
 
 ## Analyze masks and geometry
@@ -99,9 +101,9 @@ ckd predict --model checkpoints/experiment/model.json --image image.png --output
 python -m pytest
 ```
 
-The training pipeline preserves region IDs and uses a five-label contract.
-It is separate from the four-output checkpoint: model classes, manifests,
-result schemas and legends remain distinct. Weights are never silently relabelled.
+The training pipeline preserves region IDs and uses five labels. It stays
+separate from the four-output checkpoint, with its own model class, manifest,
+result schema and legend. The code never relabels the four-output weights.
 
 Use the [data guide](docs/DATA.md) to prepare patient-separated manifests.
 Duplicate image content across splits is rejected. Training starts with random
@@ -111,11 +113,11 @@ Focal loss and cross-entropy are available.
 
 ## Scope
 
-This is research software for inspecting numerical outputs and labelled images.
-It does not diagnose disease or assign stages. Checkpoint class meanings and
-training-data identity are unverified. Index scores are not calibrated disease
-probabilities. Scientific performance claims require licensed labelled data and
-independent evaluation. Generated samples test software behavior only.
+The workbench is for research on image models and labelled regions. It does
+not diagnose disease or assign stages. The checkpoint class meanings and
+training-data identity are unverified, and index scores are not calibrated
+disease probabilities. Assessing accuracy requires licensed labelled data and
+independent evaluation. The generated samples check software behavior only.
 
 Read the [architecture](docs/ARCHITECTURE.md), [model card](docs/MODEL_CARD.md),
 [data guide](docs/DATA.md), [test guide](docs/VERIFICATION.md) and

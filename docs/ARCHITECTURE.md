@@ -17,15 +17,16 @@ flowchart LR
 
 ## Registered inference
 
-`model_registry.json` defines model identities, checkpoint and safetensors
-hashes, the private asset release and allowed input profiles. `supplied.py`
-implements model builders, restricted checkpoint import, image preparation and
-the shared CLI/HTTP inference runner. Importing the UI loads no model or asset.
+`model_registry.json` lists the models, checkpoint and safetensors hashes,
+private asset release and allowed input profiles. `supplied.py` builds the
+models, imports checkpoints and prepares images. The CLI and HTTP server call
+the same inference runner. Opening the UI does not load a model or asset.
 
-A process lock permits one model operation at a time. Models and tensors are
-released afterward. CPU inference uses two threads. No model or dataset is
-downloaded implicitly. The fetch command uses GitHub CLI authentication, checks
-each asset in a temporary folder and publishes it without replacing an existing file.
+A process lock allows one model operation at a time. The runner releases the
+model and tensors afterward. CPU inference uses two threads. Downloads happen
+only when requested. The fetch command uses the existing GitHub CLI sign-in,
+checks each asset in a temporary folder and adds it to the model folder only
+if the destination does not already exist.
 
 ## Label contracts and training
 
@@ -39,14 +40,14 @@ five-output classes. Spatial hidden states provide the decoder input.
 `training.py` uses a fixed seed, patient-separated splits, two CPU threads and
 no worker subprocesses. `dataset.py` combines images, capsule masks and region
 masks while preserving region IDs. Training and prediction use the same input
-contract. The registered four-class model has two separately named input profiles.
+contract. The registered four-class model has two named input profiles.
 
 Training manifests contain architecture, labels, input settings, weight hash
 and the current run’s record. Registered inference uses the fixed model registry.
-Both paths load safetensors strictly. The explicit importer can read the exact
-hash-bound `.pth` checkpoints with `weights_only=True`. A limited NumPy
-scalar/dtype allowlist supports the Swin file’s saved metric; no custom Python
-class or unrestricted pickle execution is permitted.
+Both paths load safetensors strictly. The importer reads only `.pth`
+checkpoints whose hashes match the registry, using `weights_only=True`. A small NumPy scalar/dtype allowlist handles the
+Swin file’s saved metric. It allows no custom Python classes or unrestricted
+pickle execution.
 
 ## Analysis and serving
 

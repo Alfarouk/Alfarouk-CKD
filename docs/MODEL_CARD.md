@@ -1,7 +1,8 @@
 # Model card
 
-The workbench supports local image analysis and research inference. Model outputs
-are numerical observations, not a diagnosis or disease stage.
+Kidney Segmentation Lab runs the three image models below and measures labelled
+regions. Their outputs support image-model research, not diagnosis or disease
+staging.
 
 | Model asset | Runtime | Output | Input contract |
 | --- | --- | --- | --- |
@@ -10,9 +11,10 @@ are numerical observations, not a diagnosis or disease stage.
 | kidney_sclerosis_convnext.pth | Transformers ConvNeXt tiny | Two indices | Three explicit RGB research profiles |
 
 The registry pins checkpoint and safetensors hashes. Inference uses the
-safetensors assets in the private model release. Loading checks every tensor
-name, shape and finite value. Matching tensors establish runtime compatibility;
-they do not establish undocumented operations, class meanings or clinical performance.
+safetensors assets in the private model release. The loader checks every
+tensor name, shape and finite value. A matching state dictionary means the
+weights fit the configured model. It does not identify
+undocumented operations or class meanings, or establish clinical performance.
 
 ## Swin V2
 
@@ -27,9 +29,9 @@ Two input profiles are available:
 - `source-training-256`: Pillow grayscale, bicubic resize to 256 × 256 and /255.
 - `source-clahe-256`: OpenCV grayscale, CLAHE (2.0, 8 × 8), linear resize to 256 × 256 and /255.
 
-Input choice can change a prediction. Neither profile establishes the original
-dataset or annotation contract. The four output IDs remain neutral. Their
-anatomical meanings are unverified. Keep them separate from the five-label
+Changing the input profile can change a prediction. Neither profile identifies
+the original dataset or its annotation rules. The four output IDs remain
+neutral. Their anatomical meanings are unverified. Keep them separate from the five-label
 training pipeline.
 
 ## Classifiers
@@ -40,9 +42,9 @@ would leave the same weights intact, so tensor values alone cannot identify a cl
 
 EfficientNet uses the B4 backbone and a nested Identity→Linear head. ConvNeXt
 uses tiny widths/depths, GELU and layer-normalization epsilon 1e-12. These are
-explicit inference configurations. The checkpoint tensors do not identify
-parameterless operations uniquely: Identity and ReLU head variants accept the
-same biopsy weights but give different outputs on generated inputs.
+explicit inference configurations. The weights do not uniquely identify
+operations that have no saved parameters: Identity and ReLU head variants
+accept the same biopsy weights but give different outputs on generated inputs.
 
 The profiles are RGB 224/ImageNet normalization, RGB 380/ImageNet normalization
 and RGB 224/unit range. Each report records the selected profile, raw logits and
