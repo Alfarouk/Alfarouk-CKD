@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ckd-research-workbench"
-version = "1.1.1"
+version = "1.2.0"
 description = "Local model inference, labelled-image analysis and segmentation experiments"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -21,7 +21,7 @@ ckd = "ckd_research.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-ckd_research = ["static/*", "model_registry.json"]
+ckd_research = ["static/*", "static/examples/*.jpg", "model_registry.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

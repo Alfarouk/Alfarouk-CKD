@@ -2,34 +2,46 @@
 
 Kidney Segmentation Lab runs Swin V2, EfficientNet-B4 and ConvNeXt models and
 measures regions from label masks. The browser and CLI use the same model and
-analysis code. Both can export the image, output and settings for each run.
+analysis code. Both can export the image, output and settings for each run. The Examples tab
+opens saved ultrasound and biopsy output figures.
 
-![Local model inference on a generated test image](docs/images/workbench.jpg)
+![Ultrasound and biopsy examples in the workbench](docs/images/workbench.jpg)
 
 ## Quick start
 
-Use Python 3.12 or newer. Python 3.12 on macOS is the tested local environment.
+Use Python 3.12 or newer.
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e '.[ml,test]'
-ckd fetch-models --models-dir models
-ckd serve --models-dir models
+python -m pip install -e .
+ckd serve
 ```
 
 Open **http://127.0.0.1:8782**. In Windows PowerShell, activate the environment
 with `.\.venv\Scripts\Activate.ps1`. Stop the server with Ctrl+C.
 
-Model downloads require the [GitHub CLI](https://cli.github.com/) and access to
-this private repository. The downloader uses your existing sign-in and checks
-every file’s SHA256. It preserves existing files. The model registry pins the
-assets in release `v1.1.0`; the application version is independent of that asset
-version. No credentials or model binaries are stored in Git.
+The app opens with three saved output figures: an ultrasound scan with its
+segmentation overlay and report, plus biopsy examples labelled Normal and
+Sclerosed. Select a figure to see it in full, or open the full-size image.
+These are saved examples; switching between them does not run a model.
 
-For the generated sample and manual mask analysis, install with
-`python -m pip install -e .`. Those features work without model downloads or
-PyTorch. Images are processed locally; the server binds to localhost.
+![Saved biopsy patch and score chart](docs/images/biopsy-example.jpg)
+
+**Run a model** and **Use your labels** show new results separately. Mask analysis
+works with the core install. For inference, add the model dependencies and files:
+
+```bash
+python -m pip install -e '.[ml,test]'
+ckd fetch-models --models-dir models
+ckd serve --models-dir models
+```
+
+Downloads require the [GitHub CLI](https://cli.github.com/) and access to this
+private repository. The downloader uses the existing sign-in, checks each
+SHA256 and preserves existing files. Model assets are pinned to release
+`v1.1.0`, independently of the application version. No credentials or model
+binaries are stored in Git.
 
 ## Run inference
 
@@ -91,8 +103,6 @@ for the input image. Without calibration, measurements stay in pixels. Volume
 also requires an independently measured third dimension via `--depth-mm`.
 Separate output folders are required for segmentation and classification.
 
-![Generated sample for offline analysis and tests](docs/demo/engineering-fixture.overlay.png)
-
 ## Train a five-label segmenter
 
 ```bash
@@ -117,7 +127,7 @@ The workbench is for research on image models and labelled regions. It does
 not diagnose disease or assign stages. The checkpoint class meanings and
 training-data identity are unverified, and index scores are not calibrated
 disease probabilities. Assessing accuracy requires licensed labelled data and
-independent evaluation. The generated samples check software behavior only.
+independent evaluation. The generated CLI/test fixtures check software behavior only.
 
 Read the [architecture](docs/ARCHITECTURE.md), [model card](docs/MODEL_CARD.md),
 [data guide](docs/DATA.md), [test guide](docs/VERIFICATION.md) and

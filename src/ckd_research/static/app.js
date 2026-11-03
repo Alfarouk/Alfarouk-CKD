@@ -3,6 +3,12 @@ let current = null;
 let view = "overlay";
 let models = [];
 let resultRequest = 0;
+let activeMode = "examples";
+const EXAMPLES = Object.freeze([
+  {id:"ultrasound", title:"Ultrasound analysis", description:"Ultrasound image, segmentation overlay and analysis report.", image:"/examples/ultrasound-output.jpg", alt:"Project ultrasound figure with the original scan, colour segmentation overlay and saved report"},
+  {id:"biopsy-sclerosed", title:"Biopsy · Sclerosed", description:"Biopsy patch and score chart, labelled Sclerosed in the saved figure.", image:"/examples/biopsy-sclerosed-output.jpg", alt:"Saved biopsy figure labelled Sclerosed, with a tissue patch and model score chart"},
+  {id:"biopsy-normal", title:"Biopsy · Normal", description:"Biopsy patch and score chart, labelled Normal in the saved figure.", image:"/examples/biopsy-normal-output.jpg", alt:"Saved biopsy figure labelled Normal, with a tissue patch and model score chart"}
+]);
 const el = id => document.getElementById(id);
 const error = message => { el("error").textContent = message; el("error").classList.toggle("hidden", !message); };
 async function request(path, body) {
@@ -21,7 +27,6 @@ function show(result) {
   el("geometry-panel").classList.toggle("hidden", classification);
   el("classification-panel").classList.toggle("hidden", !classification);
   el("image-heading").textContent = classification ? "Input image" : "Image & labels";
-  el("source-badge").textContent = model ? "MODEL INFERENCE · LOCAL" : generated ? "GENERATED FIXTURE · NO MODEL RUN" : "UPLOADED LABELS · NO MODEL RUN";
   el("frame-caption").textContent = generated ? "Synthetic engineering fixture — not a patient scan" : model ? "Your image · model output · research only" : "Your image and labels · processed locally";
   el("legend").replaceChildren();
   if (classification) {
@@ -57,6 +62,7 @@ function show(result) {
   }
   el("overlay-view").disabled=!result.overlay;
   renderView();
+  workspaceView();
 }
 function renderView() {
   if (!current) return;
@@ -70,17 +76,50 @@ function renderView() {
     el(name + "-view").setAttribute("aria-pressed", String(name === selected));
   }
 }
-async function sample() { const ticket=++resultRequest; try { const result=await request("/api/demo",{calibrated:el("calibrated").checked}); if(ticket===resultRequest)show(result); } catch(e) { if(ticket===resultRequest)error(e.message); } }
+function selectExample(id) {
+  const example = EXAMPLES.find(item => item.id === id);
+  if (!example) return;
+  el("example-title").textContent = example.title;
+  el("example-description").textContent = example.description;
+  el("example-image").src = example.image;
+  el("example-image").alt = example.alt;
+  for (const name of ["example-open", "example-image-link"]) {
+    el(name).href = example.image;
+    el(name).setAttribute("aria-label", "Open full-size " + example.title + " figure");
+  }
+  for (const item of EXAMPLES) {
+    const selected = item.id === id;
+    el("example-" + item.id).classList.toggle("active", selected);
+    el("example-" + item.id).setAttribute("aria-pressed", String(selected));
+  }
+}
+function workspaceView() {
+  const examples = activeMode === "examples";
+  el("examples-panel").classList.toggle("hidden", !examples);
+  el("work-panel").classList.toggle("hidden", examples);
+  el("upload-controls").classList.toggle("hidden", activeMode !== "files");
+  el("model-controls").classList.toggle("hidden", activeMode !== "model");
+  el("work-panel").setAttribute("aria-labelledby", activeMode + "-tab");
+  el("analysis-empty").classList.toggle("hidden", Boolean(current));
+  el("analysis-results").classList.toggle("hidden", !current);
+  el("empty-title").textContent = activeMode === "model" ? "Run a model on your image" : "Analyze your image and labels";
+  el("empty-description").textContent = activeMode === "model" ? "Choose a model, an input profile and an image, then run the model." : "Choose an image and its matching label mask, then select Analyze pair.";
+  const report = current?.report;
+  el("source-badge").textContent = examples ? "PROJECT OUTPUT FIGURES" : !report ? "NO ANALYSIS YET" : report.actual_checkpoint_executed ? "MODEL INFERENCE · LOCAL" : report.source.startsWith("generated") ? "GENERATED FIXTURE · NO MODEL RUN" : "UPLOADED LABELS · NO MODEL RUN";
+}
 function tab(mode) {
   resultRequest++;
-  for (const id of ["sample","files","model"]) {const on=id===mode;el(id+"-tab").classList.toggle("active",on);el(id+"-tab").setAttribute("aria-selected",String(on));}
-  el("sample-controls").classList.toggle("hidden",mode!=="sample");
-  el("upload-controls").classList.toggle("hidden",mode!=="files");
-  el("model-controls").classList.toggle("hidden",mode!=="model");
-  error(""); if(mode==="sample") sample();
+  activeMode = mode;
+  for (const id of ["examples","files","model"]) {
+    const on = id === mode;
+    el(id + "-tab").classList.toggle("active", on);
+    el(id + "-tab").setAttribute("aria-selected", String(on));
+  }
+  error("");
+  workspaceView();
 }
-for(const mode of ["sample","files","model"])el(mode+"-tab").onclick=()=>tab(mode);
-el("calibrated").onchange=sample;el("reset").onclick=()=>{el("calibrated").checked=false;sample();};
+for (const mode of ["examples","files","model"]) el(mode + "-tab").onclick = () => tab(mode);
+for (const example of EXAMPLES) el("example-" + example.id).onclick = () => selectExample(example.id);
 for (const name of ["image","overlay"]) el(name+"-view").onclick=()=>{view=name;renderView();};
 function read(file){return new Promise((resolve,reject)=>{if(!file)return reject(new Error("Choose the required image file"));if(file.size>1500000)return reject(new Error("Each image must be smaller than 1.5 MB"));const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error("Unable to read file"));reader.readAsDataURL(file);});}
 el("upload-controls").onsubmit=async event=>{event.preventDefault();const ticket=++resultRequest;const button=event.submitter;button.disabled=true;try{const [image,mask]=await Promise.all([read(el("image-file").files[0]),read(el("mask-file").files[0])]);let row=el("row-spacing").value,col=el("column-spacing").value;if(Boolean(row)!==Boolean(col))throw new Error("Supply both row and column spacing, or leave both blank");const result=await request("/api/analyze",{image,mask,label_schema_id:el("mask-schema").value,spacing:row?[Number(row),Number(col)]:null});if(ticket===resultRequest)show(result);}catch(e){if(ticket===resultRequest)error(e.message);}finally{button.disabled=false;}};
@@ -98,7 +137,7 @@ function modelBusy(busy) {
   el("profile-select").disabled=busy||!el("model-select").value;
   el("model-image-file").disabled=busy;
   el("run-model").disabled=busy||!models.find(x=>x.id===el("model-select").value)?.installed;
-  for(const mode of ["sample","files","model"])el(mode+"-tab").disabled=busy;
+  for(const mode of ["examples","files","model"])el(mode+"-tab").disabled=busy;
 }
 el("model-controls").onsubmit=async event=>{
   event.preventDefault();const ticket=++resultRequest;const button=el("run-model");
@@ -114,4 +153,6 @@ el("model-controls").onsubmit=async event=>{
 };
 el("download").onclick=()=>{if(!current)return;const url=URL.createObjectURL(new Blob([JSON.stringify(current.report,null,2)+"\n"],{type:"application/json"}));const a=document.createElement("a");a.href=url;a.download="CKD-Analysis.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 async function loadModels(){try{const response=await fetch("/api/models");if(!response.ok)throw new Error("Unable to read local model inventory");models=(await response.json()).models;for(const spec of models)el("model-select").add(new Option(spec.title+(spec.installed?"":" · not installed"),spec.id));el("checkpoint-status").textContent=`${models.filter(x=>x.installed).length} of 3 model checkpoints available locally. Generated samples remain software checks; they do not show model accuracy.`;}catch(e){error(e.message);}}
-sample();loadModels();
+selectExample("ultrasound");
+tab("examples");
+loadModels();

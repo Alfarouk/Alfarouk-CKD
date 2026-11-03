@@ -59,12 +59,18 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/models":
             from .supplied import model_status
             return self.send(200, {"models": model_status(getattr(self.server, "models_directory", Path("models")))})
-        mapping = {"/": ("index.html", "text/html; charset=utf-8"),
-                   "/app.js": ("app.js", "text/javascript"), "/style.css": ("style.css", "text/css")}
+        mapping = {
+            "/": (("index.html",), "text/html; charset=utf-8"),
+            "/app.js": (("app.js",), "text/javascript"),
+            "/style.css": (("style.css",), "text/css"),
+            "/examples/ultrasound-output.jpg": (("examples", "ultrasound-output.jpg"), "image/jpeg"),
+            "/examples/biopsy-sclerosed-output.jpg": (("examples", "biopsy-sclerosed-output.jpg"), "image/jpeg"),
+            "/examples/biopsy-normal-output.jpg": (("examples", "biopsy-normal-output.jpg"), "image/jpeg"),
+        }
         if path not in mapping:
             return self.send(404, {"error": "Not found"})
-        name, content_type = mapping[path]
-        self.send(200, files("ckd_research").joinpath("static", name).read_bytes(), content_type)
+        parts, content_type = mapping[path]
+        self.send(200, files("ckd_research").joinpath("static", *parts).read_bytes(), content_type)
 
     def do_POST(self):
         if self.headers.get("Origin") and self.headers["Origin"] != "http://" + self.headers.get("Host", ""):

@@ -70,3 +70,15 @@ and split history, and independent evaluation.
 - [TorchVision EfficientNet-B4](https://docs.pytorch.org/vision/main/models/generated/torchvision.models.efficientnet_b4.html)
 - [Transformers ConvNeXt](https://huggingface.co/docs/transformers/model_doc/convnext)
 - [kidneyUS annotation format and access terms](https://github.com/rsingla92/kidneyUS)
+
+## Saved example figures
+
+The Examples tab displays three saved output figures. Their printed labels,
+scores and measurements belong to those figures. They are not new predictions
+or validated reference measurements. The figures do not record a checkpoint
+hash, input recipe or classifier index order, so they do not change the live
+models' neutral output labels.
+
+New inference results come from the selected model and input profile. Their
+reports record the actual weights and settings. Physical measurements still
+require a valid pixel scale and, for volume, an independently measured depth.

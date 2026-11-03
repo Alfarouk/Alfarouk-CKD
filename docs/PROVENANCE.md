@@ -26,11 +26,16 @@ The four-output Swin checkpoint is distinct from the five-label training pipelin
 
 ## Data and distribution
 
-No patient dataset or private camera image is bundled. The generated sample is
-synthetic test material. The [kidneyUS project](https://github.com/rsingla92/kidneyUS)
-is a reference for a related capsule/region annotation format, not a confirmed
-training-data source for these checkpoints. Its images have their own access
-conditions and non-commercial terms; none are redistributed here.
+Three rendered project-output figures are included in the Examples tab. They
+show an ultrasound overlay/report and two biopsy-score plots. They are saved
+figures, not results computed when the page opens. Image metadata has been
+removed without changing the pixels. The raw training dataset and original
+DICOM files are not included. The CLI/test fixture is generated test data.
+
+The [kidneyUS project](https://github.com/rsingla92/kidneyUS) is a reference for a
+related capsule/region annotation format, not a confirmed training-data source
+for these checkpoints. Its images have their own access conditions and
+non-commercial terms; none are redistributed here.
 
 This repository has no open-source license grant. Keep code, model and dataset
 permissions separate when planning public or commercial distribution.
